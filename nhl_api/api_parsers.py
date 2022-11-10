@@ -58,7 +58,7 @@ def request_json(url, **params):
     return response.json()
 
 
-def get_game_data(year, season_type, first_game=1, n_games=None,
+def get_game_data(year, season_type, first_game=1, n_games=10000,
                   coaches=None, teams=None, players=None):
     """ Requests and formats game data for all games in a given season.
 
@@ -69,11 +69,18 @@ def get_game_data(year, season_type, first_game=1, n_games=None,
         season_type: {'regular', 'playoffs'} = season type
         first_game: int = first game in the search (min = 1)
         n_games: int = maximum number of games to pull
+        coaches: dict = record of meta-data for all coaches in dataset
+        teams: dict = record of meta-data for all teams in dataset
+        players: dict = record of meta-data for all players in dataset
 
     Returns
-        game_events: DataFrame? Dictionary? = all recorded game events
-        game_meta_data: DataFrame? Dictionary? = data associated with the game
-        game_event_types: list = all possible game event types
+        game_list: list = meta-data for all games pulled
+        shift_info: list = shift data for all players and games
+        shot_list: list = shot data for all players and games
+        event_list: list = full event data for all games
+        team_boxscores: list = home and away box scores for all games
+        skater_boxscores: list = home and away skater box scores for all games
+        goalie_boxscores: list = home and away goalie box scores for all games
     """
 
     # Define the NHL.com API url for game data
@@ -89,7 +96,7 @@ def get_game_data(year, season_type, first_game=1, n_games=None,
     # Convert the game to a four digit string
     game = str(first_game).zfill(4)
 
-    # Initialize the dictionaries, if necessary
+    # Initialize the lists and dictionaries, if necessary
     coaches = {} if coaches is None else coaches
     teams = {} if teams is None else teams
     players = {} if players is None else players
@@ -174,8 +181,11 @@ def game_parser(game_dict, game_id, coaches, teams, players):
     This data is parsed and sorted into data frames to be exported as .csv files.
 
     Parameters
-        game_data: dict = all data pertaining to a particular game
+        game_data: dict = all data pertaining the associated game
         game_id: int = the NHL.com unique game ID
+        coaches: dict = record of meta-data for all coaches in dataset
+        teams: dict = record of meta-data for all teams in dataset
+        players: dict = record of meta-data for all players in dataset
 
     Returns
 
@@ -203,6 +213,24 @@ def game_parser(game_dict, game_id, coaches, teams, players):
 
 
 def parse_boxScore(box_score, game_id, coaches, teams, players):
+    """ Parses the boxScore data from the NHL.com "live" endpoint.
+
+    More description...
+
+    Parameters
+        box_score: dict = box score json for the associated game
+        game_id: int = the NHL.com unique game ID
+        coaches: dict = record of meta-data for all coaches in dataset
+        teams: dict = record of meta-data for all teams in dataset
+        players: dict = record of meta-data for all players in dataset
+
+    Returns
+        team_stats: list = reformattd team box score stats
+        skater_stats: list = reformattd skater box score stats
+        goalie_stats: list = reformattd goalie box score stats
+        active_players: dict = active players for the home and away teams
+    """
+
     # Initialize the containers
     team_stats = []
     skater_stats = []
@@ -296,6 +324,19 @@ def parse_boxScore(box_score, game_id, coaches, teams, players):
 
 
 def parse_gameData(game_data, teams, players, active_players):
+    """ Parses the gameData data from the NHL.com "live" endpoint.
+
+    More description...
+
+    Parameters
+        game_data: dict = json of meta-data for a particular game
+        teams: dict = record of meta-data for all teams in dataset
+        players: dict = record of meta-data for all players in dataset
+        active_players: dict = active players for the home and away teams
+
+    Returns
+        game_info: dict = reformatted meta-data
+    """
     # Extract game data
     game_info = game_data['game']
     game_info['GameID'] = game_info.pop('pk')
@@ -345,6 +386,19 @@ def parse_gameData(game_data, teams, players, active_players):
 
 
 def parse_liveData(play_data, game_id):
+    """ Parses the liveData data from the NHL.com "live" endpoint.
+
+    More description...
+
+    Parameters
+        play_data: dict = json of all event data for a particular game
+        game_id: int = the NHL.com unique game ID
+
+    Returns
+        all_events: list = reformattd game events
+        all_shots: list = reformattd record of all shots
+    """
+    
     # ignore_events = ['GAME_SCHEDULED', 'PERIOD_READY', 'PERIOD_START',
     #                  'PERIOD_END', 'PERIOD_OFFICIAL', 'GAME_END', 'UNKNOWN']
     ignore_events = ['GAME_SCHEDULED', 'PERIOD_READY', 'PERIOD_START', 'UNKNOWN',
