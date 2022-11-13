@@ -54,7 +54,7 @@ def request_json(url, **params):
     return response.json()
 
 
-def get_game_data(year, season_type, first_game=1, n_games=10000,
+def get_game_data(year, season_type, first_game=None, n_games=None,
                   coaches=None, teams=None, players=None):
     """ Requests and formats game data for all games in a given season.
 
@@ -65,6 +65,8 @@ def get_game_data(year, season_type, first_game=1, n_games=10000,
         season_type: {'regular', 'playoffs'} = season type
         first_game: int = first game in the search (min = 1)
         n_games: int = maximum number of games to pull
+            regular season: int giving max number of games
+            playoffs: int with digits corresponding to max round-matchup-game
         coaches: dict = record of meta-data for all coaches in dataset
         teams: dict = record of meta-data for all teams in dataset
         players: dict = record of meta-data for all players in dataset
@@ -89,6 +91,29 @@ def get_game_data(year, season_type, first_game=1, n_games=10000,
                    'playoffs': '03'}
     season = seasons_ids[season_type]
 
+    # If pulling playoff games, the game ID format is different
+    # '0xyz': X = round, Y = matchup, Z = game
+    if season_type == 'regular':
+        if first_game is None:
+            first_game = 1
+        if n_games is None:
+            n_games = 10000
+    elif season_type == 'playoffs':
+        if first_game is None:
+            first_game = 111
+        x_max = 4
+        y_max = [8, 4, 2, 1]
+        z_max = 7
+        if n_games is not None:
+            # TODO: handle this better by throwing an error/exception
+            if (n_games > 999) | (n_games < 111):
+                print("Not a valid 'n_games' value")
+                return
+            else:
+                x_max = min(n_games // 100, x_max)
+                y_max = [min((n_games % 100) // 10, ym) for ym in y_max]
+                z_max = min(n_games % 10, z_max)
+
     # Convert the game to a four digit string
     game = str(first_game).zfill(4)
 
@@ -109,7 +134,8 @@ def get_game_data(year, season_type, first_game=1, n_games=10000,
     # Make requests to the NHL.com API for each game of season
     while True:
         # Define the game ID
-        game_id = '{}{}{}'.format(str(year), season, game)
+        # game_id = '{}{}{}'.format(str(year), season, game)
+        game_id = f'{str(year)}{season}{game}'
         # print(game_id)
 
         # Request data for a single game
@@ -120,7 +146,7 @@ def get_game_data(year, season_type, first_game=1, n_games=10000,
             game_dict = game_dict.json()
         except requests.exceptions.HTTPError as errh:
             print(errh)
-            print(f'Could not find game info: Year={year}, Game={game}')
+            print(f'Could not find game info for game ID: {game_id}')
             return n_games_out
         except requests.exceptions.ConnectionError as errc:
             print(errc)
@@ -128,6 +154,23 @@ def get_game_data(year, season_type, first_game=1, n_games=10000,
             print(errt)
         except requests.exceptions.RequestException as err:
             print(err)
+
+        # Update the game number
+        game = str(int(game) + 1).zfill(4)
+        if season_type == 'playoffs':
+            _, x, y, z = [int(char) for char in game]
+            if z > z_max:
+                z = 1
+                y += 1
+                if y > y_max[x - 1]:
+                    y = 1
+                    x += 1
+            game = f'0{x}{y}{z}'
+
+        # If a game record is logged, but the game data does not exist
+        if len(game_dict['liveData']['plays']['allPlays']) == 0:
+            print(game_id)
+            continue
 
         # Request shift data for the same game
         shift_request_url = API_URL_SHIFT.format(game_id)
@@ -159,10 +202,14 @@ def get_game_data(year, season_type, first_game=1, n_games=10000,
         n_games_out = (game_list, shift_list, event_list, team_boxscores,
                        skater_boxscores, goalie_boxscores)
 
-        # Update the game number and check for number of games
-        game = str(int(game) + 1).zfill(4)
-        if (int(game) - int(first_game)) >= n_games:
-            return n_games_out
+        # Check for max number of games
+        if season_type == 'regular':
+            if (int(game) - int(first_game)) >= n_games:
+                return n_games_out
+        elif season_type == 'playoffs':
+            _, x, y, z = [int(char) for char in game]
+            if x > x_max:
+                return n_games_out
 
 
 def game_parser(game_dict, game_id, coaches, teams, players):
@@ -320,13 +367,13 @@ def parse_boxscore(boxscore, game_id, coaches, teams, players):
             coach_name = coach_x['fullName']
             if coach_name not in coaches:
                 coach_x.pop('link', None)
-                coach_x['coachID'] = len(coaches)
+                coach_x['CoachID'] = len(coaches)
                 coach_x['code'] = coach_dict['position']['code']
                 coach_ids[key] = len(coaches)
                 coach_x['position'] = coach_dict['position']['type']
                 coaches[coach_name] = coach_x
             else:
-                coach_ids[key] = coaches[coach_name]['coachID']
+                coach_ids[key] = coaches[coach_name]['CoachID']
 
         # Append the lists for home and away
         active_players[key] = active_skaters + active_goalies
@@ -399,8 +446,11 @@ def parse_gameData(game_data, teams, players, active_players):
             height_cm = convert_height_to_cm(player_dict['height'])
             players[id_key]['height_cm'] = height_cm
             players[id_key]['weight_kg'] = round(player_dict['weight'] / 2.2, 2)
-            if player_dict['rookie']:
-                players[id_key]['rookieSeason'] = game_info['season']
+            # TODO: pull rookie seasons from player stats and append to .csv
+            #  player file later. this boolean does not account for players who
+            #  were rookies prior to the first year pulled
+            # if player_dict['rookie']:
+            #     players[id_key]['rookieSeason'] = game_info['season']
 
     return game_info
 

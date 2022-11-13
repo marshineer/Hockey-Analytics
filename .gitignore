@@ -133,3 +133,4 @@ dmypy.json
 
 # Project folders
 data/
+old_versions/
