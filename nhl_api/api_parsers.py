@@ -1,32 +1,28 @@
 import requests
-from parsing_helpers import convert_height_to_cm, get_venue_coords
+from nhl_api.parsing_helpers import convert_height_to_cm, get_venue_coords
 
 
-# TODO: create a venue lookup table (dictionary) of all the arena's coordinates
-#  (x, y) = (longitude, latitude)
-# TODO: create a function to calculate travel distance between arenas
-# TODO: handle multiple types of play event dictionaries using one of two methods,
-#  try-except or dict.get(key)
 #  https://stackoverflow.com/questions/6130768/return-a-default-value-if-a-dictionary-key-is-not-available
 #  https://realpython.com/python-keyerror/
-# TODO: use switch: ['result']['event'] -> case to handle play parsing
 # TODO: write function for converting shot coordinates to be relative to net locations
 #  Should the rink be divided into zones, or left as a continuous variable?
 # TODO: figure out how to handle Atlanta (Winnipeg) and Phoenix (Arizona) moving cities
 # TODO: add functionality to request games within a date range
 
-shot_dict = {'playerID': None,
-             'goal': False,
-             'shotType': None,
-             'assist1ID': None,
-             'assist2ID': None,
-             'GWG': False,
-             'EN': False,
-             'goalieID': None,
-             'block': False,
-             'blockerID': None,
-             'strength': None,
-             'miss': False}
+
+event_cols = {'secondaryType': None,
+              'player1ID': None,
+              'player1Type': None,
+              'player2ID': None,
+              'player2Type': None,
+              'xCoord': None,
+              'yCoord': None,
+              'assist1ID': None,
+              'assist2ID': None,
+              'strength': None,
+              'emptyNet': None,
+              'gameWinningGoal': None,
+              'penaltyMinutes': None}
 
 
 def request_json(url, **params):
@@ -85,7 +81,7 @@ def get_game_data(year, season_type, first_game=1, n_games=10000,
 
     # Define the NHL.com API url for game data
     API_URL_GAME = 'https://statsapi.web.nhl.com/api/v1/game/{}/feed/live'
-    API_URL_SHIFT = 'https://api.nhle.com/stats/rest/en/shiftcharts?cayenneExp=' \
+    API_URL_SHIFT = 'https://api.nhle.com/stats/rest/en/shiftcharts?cayenneExp='\
                     'gameId={}'
 
     # Define the season type
@@ -104,8 +100,8 @@ def get_game_data(year, season_type, first_game=1, n_games=10000,
     skater_boxscores = []
     goalie_boxscores = []
     game_list = []
-    shot_list = []
     event_list = []
+    shift_list = []
     shift_dict = {}
     game_dict = {}
     n_games_out = {}
@@ -114,7 +110,7 @@ def get_game_data(year, season_type, first_game=1, n_games=10000,
     while True:
         # Define the game ID
         game_id = '{}{}{}'.format(str(year), season, game)
-        print(game_id)
+        # print(game_id)
 
         # Request data for a single game
         game_request_url = API_URL_GAME.format(game_id)
@@ -150,19 +146,18 @@ def get_game_data(year, season_type, first_game=1, n_games=10000,
 
         # Extract the single game data
         game_output = game_parser(game_dict, game_id, coaches, teams, players)
-        game_list += game_output[0]
+        game_list.append(game_output[0])
         event_list += game_output[1]
-        shot_list += game_output[2]
-        team_boxscores += game_output[3]
-        skater_boxscores += game_output[4]
-        goalie_boxscores += game_output[5]
+        team_boxscores += game_output[2]
+        skater_boxscores += game_output[3]
+        goalie_boxscores += game_output[4]
 
         # Extract the shift data
-        shift_info = parse_shifts(shift_dict)
+        shift_list += parse_shifts(shift_dict)
 
         # Group outputs in tuple
-        n_games_out = (game_list, shift_info, shot_list, event_list,
-                       team_boxscores, skater_boxscores, goalie_boxscores)
+        n_games_out = (game_list, shift_list, event_list, team_boxscores,
+                       skater_boxscores, goalie_boxscores)
 
         # Update the game number and check for number of games
         game = str(int(game) + 1).zfill(4)
@@ -192,33 +187,36 @@ def game_parser(game_dict, game_id, coaches, teams, players):
     """
 
     # Separate the types of game data
-    box_score = game_dict['liveData']['boxScore']['teams']
+    boxscore = game_dict['liveData']['boxscore']['teams']
     game_data = game_dict['gameData']
     play_data = game_dict['liveData']['plays']
 
     # Parse the box score data
-    box_score_output = parse_boxScore(box_score, game_id,
-                                      coaches, teams, players)
-    team_stats, skater_stats, goalie_stats, active_players = box_score_output
+    boxscore_output = parse_boxscore(boxscore, game_id, coaches, teams, players)
+    team_stats, skater_stats, goalie_stats, active_players = boxscore_output[:-1]
+    coach_ids = boxscore_output[-1]
 
     # Parse the game data and update player info
     game_info = parse_gameData(game_data, teams, players, active_players)
+    game_info['shootout'] = game_dict['liveData']['linescore']['hasShootout']
+    # game_info['awayCoach'] = boxscore['away']['coaches']['person']['fullName']
+    # game_info['homeCoach'] = boxscore['home']['coaches']['person']['fullName']
+    game_info['awayCoachID'] = coach_ids['away']
+    game_info['homeCoachID'] = coach_ids['home']
 
     # Parse the game play events
-    game_events, shot_events = parse_liveData(play_data, game_id)
+    game_events = parse_liveData(play_data, game_id)
 
-    # TODO: get game_events and shot_events in a better format for tables
-    return game_info, game_events, shot_events,\
-        team_stats, skater_stats, goalie_stats
+    return game_info, game_events, team_stats, skater_stats, goalie_stats
 
 
-def parse_boxScore(box_score, game_id, coaches, teams, players):
-    """ Parses the boxScore data from the NHL.com "live" endpoint.
+def parse_boxscore(boxscore, game_id, coaches, teams, players):
+    """ Parses the boxscore data from the NHL.com "live" endpoint.
 
     More description...
 
     Parameters
-        box_score: dict = box score json for the associated game
+        boxscore: dict = box score json for the associated game
         game_id: int = the NHL.com unique game ID
         coaches: dict = record of meta-data for all coaches in dataset
         teams: dict = record of meta-data for all teams in dataset
@@ -236,20 +234,21 @@ def parse_boxScore(box_score, game_id, coaches, teams, players):
     skater_stats = []
     goalie_stats = []
     active_players = {}
+    coach_ids = {}
 
-    for i, (key, team_dict) in enumerate(box_score['teams']):
+    for i, (key, team_dict) in enumerate(boxscore.items()):
         # Extract team info and box scores
         # Team data
         team_id_str = str(team_dict['team']['id'])
         if team_id_str not in teams:
-            team_x = team_dict['team']
+            team_x = team_dict['team'].copy()
             team_x.pop('link', None)
             team_x.pop('triCode', None)
             team_x['TeamID'] = team_x.pop('id')
             teams[team_id_str] = team_x
 
         # Team stats
-        team_stat_line = team_dict['teamStats']['teamSkaterStats']
+        team_stat_line = team_dict['teamStats']['teamSkaterStats'].copy()
         team_stat_line['GameID'] = game_id
         team_stat_line['TeamID'] = team_dict['team']['id']
         team_stat_line['HomeTeam'] = i
@@ -260,14 +259,23 @@ def parse_boxScore(box_score, game_id, coaches, teams, players):
         goalie_stat_list = []
         active_skaters = team_dict['skaters']
         active_goalies = team_dict['goalies']
-        # active_players[key]['skaters'] = active_skaters
-        # active_players[key]['goalies'] = active_goalies
-        active_players[key] = active_skaters + active_goalies
-        for player_dict in team_dict['players'].value():
-            player_x = player_dict['person']
+        for player_dict in team_dict['players'].values():
+            player_x = player_dict['person'].copy()
             player_id = player_x['id']
 
             if player_id in active_skaters:
+                # Skater stats (if a players has no stats, they weren't active)
+                try:
+                    player_stat_line = player_dict['stats']['skaterStats'].copy()
+                except KeyError:
+                    active_skaters.remove(player_id)
+                    continue
+                player_stat_line.pop('faceOffPct', None)
+                player_stat_line['GameID'] = game_id
+                player_stat_line['PlayerID'] = player_id
+                player_stat_line['homeTeam'] = i
+                skater_stat_list.append(player_stat_line)
+
                 # Skater data
                 if str(player_id) not in players:
                     player_x.pop('link', None)
@@ -280,15 +288,22 @@ def parse_boxScore(box_score, game_id, coaches, teams, players):
                         player_x['position2'] = 'D'
                     players[str(player_id)] = player_x
 
-                # Skater stats
-                player_stat_line = team_dict['stats']['skaterStats']
-                player_stat_line.pop('faceOffPct', None)
+            elif player_id in active_goalies:
+                # Goalie stats (if a players has no stats, they weren't active)
+                try:
+                    player_stat_line = player_dict['stats']['goalieStats'].copy()
+                except KeyError:
+                    active_goalies.remove(player_id)
+                    continue
+                player_stat_line.pop('savePercentage', None)
+                player_stat_line.pop('shortHandedSavePercentage', None)
+                player_stat_line.pop('powerPlaySavePercentage', None)
+                player_stat_line.pop('evenStrengthSavePercentage', None)
                 player_stat_line['GameID'] = game_id
                 player_stat_line['PlayerID'] = player_id
                 player_stat_line['homeTeam'] = i
-                skater_stat_list.append(player_stat_line)
+                goalie_stat_list.append(player_stat_line)
 
-            elif player_id in active_goalies:
                 # Goalie data
                 if str(player_id) not in players:
                     player_x.pop('link', None)
@@ -297,30 +312,28 @@ def parse_boxScore(box_score, game_id, coaches, teams, players):
                     player_x['position'] = player_dict['position']['code']
                     players[str(player_id)] = player_x
 
-                # Goalie stats
-                player_stat_line = team_dict['stats']['goalieStats']
-                player_stat_line.pop('savePercentage', None)
-                player_stat_line.pop('powerPlaySavePercentage', None)
-                player_stat_line.pop('evenStrengthSavePercentage', None)
-                player_stat_line['GameID'] = game_id
-                player_stat_line['PlayerID'] = player_id
-                player_stat_line['homeTeam'] = i
-                goalie_stat_list.append(player_stat_line)
-
         # Extract the coach info
-        for coach_x in team_dict['coaches']['person']:
+        for coach_dict in team_dict['coaches']:
+            if coach_dict['position']['code'] != 'HC':
+                continue
+            coach_x = coach_dict['person'].copy()
             coach_name = coach_x['fullName']
             if coach_name not in coaches:
                 coach_x.pop('link', None)
-                coach_x['code'] = coach_x['code']
-                coach_x['position'] = coach_x['type']
+                coach_x['coachID'] = len(coaches)
+                coach_x['code'] = coach_dict['position']['code']
+                coach_ids[key] = len(coaches)
+                coach_x['position'] = coach_dict['position']['type']
                 coaches[coach_name] = coach_x
+            else:
+                coach_ids[key] = coaches[coach_name]['coachID']
 
         # Append the lists for home and away
+        active_players[key] = active_skaters + active_goalies
         skater_stats += skater_stat_list
         goalie_stats += goalie_stat_list
 
-    return team_stats, skater_stats, goalie_stats, active_players
+    return team_stats, skater_stats, goalie_stats, active_players, coach_ids
 
 
 def parse_gameData(game_data, teams, players, active_players):
@@ -338,7 +351,7 @@ def parse_gameData(game_data, teams, players, active_players):
         game_info: dict = reformatted meta-data
     """
     # Extract game data
-    game_info = game_data['game']
+    game_info = game_data['game'].copy()
     game_info['GameID'] = game_info.pop('pk')
     if game_info['type'] == 'R':
         game_info['type'] = 'REG'
@@ -348,37 +361,44 @@ def parse_gameData(game_data, teams, players, active_players):
         game_info['type'] = 'PRE'
     else:
         print('Unfamiliar game type')
-    game_info['datetime'] = game_data['datetime']['datetime']
+    game_info['datetime'] = game_data['datetime']['dateTime']
     game_info['awayTeamId'] = game_data['teams']['away']['id']
     game_info['homeTeamId'] = game_data['teams']['home']['id']
-    # TODO: should the goalies be separate from the players?
     game_info['activeAwayPlayers'] = active_players['away']
     game_info['activeHomePlayers'] = active_players['home']
     game_info['location'] = game_data['teams']['home']['venue']['city']
-    game_info['timeZone'] = game_data['teams']['home']['venue']['tz']
-    game_info['timeZoneOffset'] = game_data['teams']['home']['venue']['offset']
+    game_info['arena'] = game_data['venue']['name']
+    game_info['timeZone'] = game_data['teams']['home']['venue']['timeZone']['tz']
+    game_info['timeZoneOffset'] = \
+        game_data['teams']['home']['venue']['timeZone']['offset']
 
     # Update team info
-    for team_dict in game_info['teams'].values():
-        id_keyy = str(team_dict['id'])
+    for team_dict in game_data['teams'].values():
+        id_key = str(team_dict['id'])
         location = team_dict['venue']['city']
-        teams[id_keyy]['city'] = location
-        teams[id_keyy]['name'] = team_dict['teamName']
-        teams[id_keyy]['arenaName'] = team_dict['venue']['name']
+        if 'city' in teams[id_key]:
+            continue
+        teams[id_key]['teamName'] = team_dict['teamName']
+        teams[id_key]['teamLocation'] = team_dict['locationName']
+        teams[id_key]['arenaCity'] = location
+        teams[id_key]['arenaName'] = team_dict['venue']['name']
         venue_lat, venue_lon = get_venue_coords(location)
-        teams[id_keyy]['arenaCoordinates'] = (venue_lat, venue_lon)
+        teams[id_key]['arenaLatitude'] = venue_lon
+        teams[id_key]['arenaLlongitude'] = venue_lat
 
     # Update player info
     all_active_players = active_players['away'] + active_players['home']
-    for player_dict in game_info['players'].values():
+    for player_dict in game_data['players'].values():
         player_id = player_dict['id']
         if player_id in all_active_players:
             id_key = str(player_id)
+            if 'birthDate' in players[id_key]:
+                continue
             players[id_key]['birthDate'] = player_dict['birthDate']
             players[id_key]['nationality'] = player_dict['nationality']
             height_cm = convert_height_to_cm(player_dict['height'])
             players[id_key]['height_cm'] = height_cm
-            players[id_key]['weight_kg'] = player_dict['weight'] / 2.2
+            players[id_key]['weight_kg'] = round(player_dict['weight'] / 2.2, 2)
             if player_dict['rookie']:
                 players[id_key]['rookieSeason'] = game_info['season']
 
@@ -398,29 +418,33 @@ def parse_liveData(play_data, game_id):
         all_events: list = reformattd game events
         all_shots: list = reformattd record of all shots
     """
-    
-    # ignore_events = ['GAME_SCHEDULED', 'PERIOD_READY', 'PERIOD_START',
-    #                  'PERIOD_END', 'PERIOD_OFFICIAL', 'GAME_END', 'UNKNOWN']
+
     ignore_events = ['GAME_SCHEDULED', 'PERIOD_READY', 'PERIOD_START', 'UNKNOWN',
                      'PERIOD_END', 'PERIOD_OFFICIAL', 'GAME_END', 'FIGHT', 'SUB',
                      'GAME_OFFICIAL', 'SHOOTOUT_COMPLETE', 'OFFICIAL_CHALLENGE',
                      'EARLY_INTERMISSION_START', 'EARLY_INTERMISSION_END',
                      'EMERGENCY_GOALTENDER']
-    # goal_inds = play_data['scoringPlays']
-    # penalty_inds = play_data['penaltyPlays']
-    # period_splits = play_data['playsByPeriod']
-    play_list = play_data['plays']
-    all_events = []
-    all_shots = []
 
+    play_list = play_data['allPlays']
+    all_events = []
+    # all_shots = []
+
+    event_cnt = 0
     for play in play_list:
+        # Skip ignored events
         if play['result']['eventTypeId'] in ignore_events:
             continue
-        event_x = play['result']
+
+        # Extract data common to all events
+        event_x = play['result'].copy()
+        event_x.update(event_cols.copy())
         event_x['gameID'] = game_id
         event_x['eventID'] = play['about']['eventIdx']
+        event_x['eventID'] = event_cnt
+        event_cnt += 1
         event_x.pop('event', None)
         event_x.pop('eventCode', None)
+        event_x.pop('penaltySeverity', None)
         event_x['period'] = play['about']['period']
         # TODO: look at what the period and periodType are for OT games
         #  (also in playoffs), do I need periodType?
@@ -428,86 +452,137 @@ def parse_liveData(play_data, game_id):
         event_x['periodTime'] = play['about']['periodTime']
         event_x['awayScore'] = play['about']['goals']['away']
         event_x['homeScore'] = play['about']['goals']['home']
-        event_x['xCoord'] = play['coordinates']['x']
-        event_x['yCoord'] = play['coordinates']['y']
+        if event_x['eventTypeId'] != 'STOP':
+            try:
+                event_x['xCoord'] = play['coordinates']['x']
+                event_x['yCoord'] = play['coordinates']['y']
+            except KeyError:
+                pass
+                # print(event_x['eventTypeId'])
+                # print(event_x['description'])
+        if 'secondaryType' in play['result']:
+            event_x['secondaryType'] = play['result']['secondaryType']
+
+        # Extract data for particular events
         if 'players' in play:
             player_ids = [player['player']['id'] for player in play['players']]
-            event_x['playerID'] = player_ids[0]  # TODO: doesn't work for faceoffs
-        # TODO: create a table of shots with gameID, playerID, shotType(?),
-        #  goal (bool), period, periodTime, xCoord, yCoord, homeScore,
-        #  awayScore, missed (bool), saved (bool), blocked (bool)
-        # TODO: shot and event data have a lot of empty space. is there a better
-        #  way to organize these? Are they going to be tables in the database?
+            event_x['player1ID'] = player_ids[0]
+            event_x['player1Type'] = play['players'][0]['playerType']
         event_type = event_x['eventTypeId']
-        if event_type in ['GOAL', 'SHOT', 'MISSED_SHOT', 'BLOCKED_SHOT']:
-            shot_x = shot_dict.copy()
-            shot_x.update(event_x)
-            if (event_type == 'GOAL') | (event_type == 'SHOT'):
-                shot_x['shotType'] = event_x['secondaryType']
-                shot_x['goalieID'] = player_ids[-1]
-                if event_type == 'GOAL':
-                    shot_x['goal'] = True
-                    shot_x['GWG'] = event_x['gameWinningGoal']
-                    shot_x['EN'] = event_x['emptyNet']
-                    shot_x['strength'] = event_x['strength']['code']
-                    if len(player_ids) == 3:
-                        shot_x['assist1ID'] = player_ids[1]
-                    elif len(player_ids) == 4:
-                        shot_x['assist2ID'] = player_ids[2]
-            elif event_type == 'MISSED_SHOT':
-                shot_x['miss'] = True
-            elif event_type == 'BLOCKED_SHOT':
-                shot_x['block'] = True
-                shot_x['blockerID'] = player_ids[0]
-                shot_x['playerID'] = player_ids[-1]
-            all_shots.append(shot_x)
+        if event_type in ['GOAL', 'SHOT']:
+            event_x['player2ID'] = player_ids[-1]
+            event_x['player2Type'] = play['players'][-1]['playerType']
+            if event_type == 'GOAL':
+                event_x['strength'] = play['result']['strength']['code']
+                if len(player_ids) == 3:
+                    event_x['assist1ID'] = player_ids[1]
+                elif len(player_ids) == 4:
+                    event_x['assist2ID'] = player_ids[2]
+        elif event_type in ['FACEOFF', 'HIT', 'BLOCKED_SHOT', 'PENALTY']:
+            if len(player_ids) == 2:
+                event_x['player2ID'] = player_ids[1]
+                event_x['player2Type'] = play['players'][1]['playerType']
 
-        elif event_type == 'FACEOFF':
-            # event_x['faceoffWinner'] =
-            pass
-        elif event_type == 'HIT':
-            pass
-        elif event_type in ['GIVEAWAY', 'TAKEAWA']:
-            pass
-        elif event_type == 'PENALTY':
-            pass
-        elif event_type == 'STOP':
-            pass
+        # # Extract shot data
+        # # TODO: create a table of shots with gameID, playerID, shotType(?),
+        # #  goal (bool), period, periodTime, xCoord, yCoord, homeScore,
+        # #  awayScore, missed (bool), saved (bool), blocked (bool)
+        # # TODO: shot and event data have a lot of empty space. is there a better
+        # #  way to organize these? Are they going to be tables in the database?
+        # if event_type in ['GOAL', 'SHOT', 'MISSED_SHOT', 'BLOCKED_SHOT']:
+        # #     shot_x = shot_dict.copy()
+        #     shot_x.update(event_x)
+        #     if (event_type == 'GOAL') | (event_type == 'SHOT'):
+        #         shot_x['shotType'] = event_x['secondaryType']
+        #         shot_x['goalieID'] = player_ids[-1]
+        #         if event_type == 'GOAL':
+        #             shot_x['goal'] = True
+        #             shot_x['GWG'] = event_x['gameWinningGoal']
+        #             shot_x['EN'] = event_x['emptyNet']
+        #             shot_x['strength'] = event_x['strength']['code']
+        #             if len(player_ids) == 3:
+        #                 shot_x['assist1ID'] = player_ids[1]
+        #             elif len(player_ids) == 4:
+        #                 shot_x['assist2ID'] = player_ids[2]
+        #     elif event_type == 'MISSED_SHOT':
+        #         shot_x['miss'] = True
+        #     elif event_type == 'BLOCKED_SHOT':
+        #         shot_x['block'] = True
+        #         shot_x['blockerID'] = player_ids[0]
+        #         shot_x['playerID'] = player_ids[-1]
+        #     all_shots.append(shot_x)
+
+        # # event_x.update(event_info.copy())
+        # # event types [faceoff, giveaway, takeaway, penalty, stoppage, hit, sub?]
+        # if event_type in ['GOAL', 'SHOT', 'MISSED_SHOT', 'BLOCKED_SHOT']:
+        #     event_x['player1ID'] = player_ids[0]
+        #     event_x['player1Type'] = play['players'][0]['PlayerType']
+        #     if (event_type == 'GOAL') | (event_type == 'SHOT'):
+        #         event_x['secondaryType'] = play['result']['secondaryType']
+        #         event_x['goalieID'] = player_ids[-1]
+        #         if event_type == 'GOAL':
+        #             event_x['goal'] = True
+        #             event_x['GWG'] = event_x['gameWinningGoal']
+        #             event_x['EN'] = event_x['emptyNet']
+        #             event_x['strength'] = event_x['strength']['code']
+        #             if len(player_ids) == 3:
+        #                 event_x['assist1ID'] = player_ids[1]
+        #             elif len(player_ids) == 4:
+        #                 event_x['assist2ID'] = player_ids[2]
+        #     elif event_type == 'MISSED_SHOT':
+        #         event_x['miss'] = True
+        #     elif event_type == 'BLOCKED_SHOT':
+        #         event_x['block'] = True
+        #         event_x['player2ID'] = player_ids[0]
+        #         event_x['player2Type'] = play['players'][0]['PlayerType']
+        #         event_x['player1ID'] = player_ids[-1]
+        #         event_x['player1Type'] = play['players'][-1]['PlayerType']
+        # elif event_type in ['FACEOFF', 'HIT', 'PENALTY']:
+        #     event_x['player1ID'] = player_ids[0]
+        #     event_x['player1Type'] = play['players'][0]['PlayerType']
+        #     event_x['player2ID'] = player_ids[1]
+        #     event_x['player2Type'] = play['players'][1]['PlayerType']
+        #     if event_type == 'PENALTY':
+        #         event_x['secondaryType'] = play['result']['secondaryType']
+        #         event_x['penaltyMinutes'] = play['result']['penaltyMinutes']
+        # # elif event_type == 'HIT':
+        # #     pass
+        # elif event_type in ['GIVEAWAY', 'TAKEAWAY']:
+        #     event_x['player1ID'] = player_ids[0]
+        # # elif event_type == 'PENALTY':
+        # #     event_x['secondaryType'] = play['result']['secondaryType']
+        # #     event_x['penaltyMinutes'] = play['result']['penaltyMinutes']
+        # # elif event_type == 'STOP':
+        # #     pass
 
         all_events.append(event_x)
 
-        # event_types = {
-        #     'PERIOD START': 'PSTR',
-        #     'FACEOFF': 'FAC',
-        #     'BLOCKED SHOT': 'BLOCK',
-        #     'GAME END': 'GEND',
-        #     'GIVEAWAY': 'GIVE',
-        #     'GOAL': 'GOAL',
-        #     'HIT': 'HIT',
-        #     'MISSED SHOT': 'MISS',
-        #     'PERIOD END': 'PEND',
-        #     'SHOT': 'SHOT',
-        #     'STOPPAGE': 'STOP',
-        #     'TAKEAWAY': 'TAKE',
-        #     'PENALTY': 'PENL',
-        #     'EARLY INT START': 'EISTR',
-        #     'EARLY INT END': 'EIEND',
-        #     'SHOOTOUT COMPLETE': 'SOC',
-        #     'CHALLENGE': 'CHL',
-        #     'EMERGENCY GOALTENDER': 'EGPID'
-        # }
-        # # 'PERIOD READY' & 'PERIOD OFFICIAL'..etc aren't found in html...so get rid of them
-        # events_to_ignore = ['PERIOD READY', 'PERIOD OFFICIAL', 'GAME READY', 'GAME OFFICIAL', 'GAME SCHEDULED']
-
-    return all_events, all_shots
+    return all_events
 
 
 def parse_shifts(shift_data):
+    """ Parses the data from the NHL.com shifts endpoint.
+
+    More description...
+
+    Parameters
+        shift_data: dict = json of all event data for a particular game
+
+    Returns
+        all_shifts: list = reformattd record of all shifts
     """
 
-    :param shift_data:
-    :return:
-    """
-    # TODO: maybe make a row for each player, with a list of start and end time
-    #  tuple pairs?
-    return shift_data
+    shift_list = shift_data['data']
+    all_shifts = []
+    # Extract data common to all events
+    for shift in shift_list:
+        if shift['detailCode'] == 0:
+            shift_x = {'gameID': shift['gameId'],
+                       'playerId': shift['playerId'],
+                       'shiftId': shift['shiftNumber'],
+                       'period': shift['period'],
+                       'startTime': shift['startTime'],
+                       'endTime': shift['endTime']}
+            all_shifts.append(shift_x)
+
+    return all_shifts

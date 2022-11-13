@@ -1,5 +1,5 @@
 import numpy as np
-# from geopy.geocoders import Nominatim
+from geopy.geocoders import Nominatim
 
 
 def convert_height_to_cm(height):
@@ -75,19 +75,19 @@ def get_venue_coords(city):
         loc.longitude: float = longitude of the city
     """
 
-    # # Initialize the locator
-    # geolocator = Nominatim(user_agent='myGeocoder')
-    #
-    # # Set the country
-    # country = 'usa'
-    # canadian_cities = ['Edmonton', 'Calgary', 'Vancouver', 'Winnipeg',
-    #                    'Toronto', 'Montreal', 'Ottawa']
-    # if city in canadian_cities:
-    #     country = 'canada'
-    #
-    # # Query the geolocator to find the location
-    # loc = geolocator.geocode(f'{city}, {country}')
-    #
-    # return loc.latitude, loc.longitude
-    return 1, 1
+    # Initialize the locator
+    geolocator = Nominatim(user_agent='myGeocoder')
+
+    # Set the country
+    country = 'usa'
+    canadian_cities = ['Edmonton', 'Calgary', 'Vancouver', 'Winnipeg',
+                       'Toronto', 'Montreal', 'Ottawa']
+    if city in canadian_cities:
+        country = 'canada'
+
+    # Query the geolocator to find the location
+    loc = geolocator.geocode(f'{city}, {country}')
+
+    return loc.latitude, loc.longitude
+    # return 1, 1
 
