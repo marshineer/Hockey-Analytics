@@ -40,7 +40,7 @@ def request_json(url, **params):
     """
 
     try:
-        response = requests.get(url, timeout=5, params=params)
+        response = requests.get(url, timeout=30, params=params)
         response.raise_for_status()
     except requests.exceptions.HTTPError as errh:
         print(errh)
@@ -62,7 +62,7 @@ def get_game_data(year, season_type, first_game=None, n_games=None,
 
     Parameters
         year: int = season during which game occurred
-        season_type: {'regular', 'playoffs'} = season type
+        season_type: {'regular', 'playoff'} = season type
         first_game: int = first game in the search (min = 1)
         n_games: int = maximum number of games to pull
             regular season: int giving max number of games
@@ -88,7 +88,7 @@ def get_game_data(year, season_type, first_game=None, n_games=None,
 
     # Define the season type
     seasons_ids = {'regular': '02',
-                   'playoffs': '03'}
+                   'playoff': '03'}
     season = seasons_ids[season_type]
 
     # If pulling playoff games, the game ID format is different
@@ -98,7 +98,7 @@ def get_game_data(year, season_type, first_game=None, n_games=None,
             first_game = 1
         if n_games is None:
             n_games = 10000
-    elif season_type == 'playoffs':
+    elif season_type == 'playoff':
         if first_game is None:
             first_game = 111
         x_max = 4
@@ -141,23 +141,37 @@ def get_game_data(year, season_type, first_game=None, n_games=None,
         # Request data for a single game
         game_request_url = API_URL_GAME.format(game_id)
         try:
-            game_dict = requests.get(game_request_url, timeout=5)
+            game_dict = requests.get(game_request_url, timeout=30)
             game_dict.raise_for_status()
             game_dict = game_dict.json()
         except requests.exceptions.HTTPError as errh:
             print(errh)
             print(f'Could not find game info for game ID: {game_id}')
-            return n_games_out
+            if season_type == 'regular':
+                return n_games_out
+            elif season_type == 'playoff':
+                _, x, y, z = [int(char) for char in game]
+                z = 1
+                y += 1
+                if y > y_max[x - 1]:
+                    y = 1
+                    x += 1
+                    if x > x_max:
+                        return n_games_out
+                game = f'0{x}{y}{z}'
+                continue
         except requests.exceptions.ConnectionError as errc:
             print(errc)
+            continue
         except requests.exceptions.Timeout as errt:
             print(errt)
+            continue
         except requests.exceptions.RequestException as err:
             print(err)
 
         # Update the game number
         game = str(int(game) + 1).zfill(4)
-        if season_type == 'playoffs':
+        if season_type == 'playoff':
             _, x, y, z = [int(char) for char in game]
             if z > z_max:
                 z = 1
@@ -167,10 +181,10 @@ def get_game_data(year, season_type, first_game=None, n_games=None,
                     x += 1
             game = f'0{x}{y}{z}'
 
-        # If a game record is logged, but the game data does not exist
-        if len(game_dict['liveData']['plays']['allPlays']) == 0:
-            print(game_id)
-            continue
+        # # If a game record is logged, but the game data does not exist
+        # if len(game_dict['liveData']['plays']['allPlays']) == 0:
+        #     print(f'No game info for game ID: {game_id}')
+        #     continue
 
         # Request shift data for the same game
         shift_request_url = API_URL_SHIFT.format(game_id)
@@ -182,8 +196,10 @@ def get_game_data(year, season_type, first_game=None, n_games=None,
             print(errh)
         except requests.exceptions.ConnectionError as errc:
             print(errc)
+            continue
         except requests.exceptions.Timeout as errt:
             print(errt)
+            continue
         except requests.exceptions.RequestException as err:
             print(err)
 
@@ -206,7 +222,7 @@ def get_game_data(year, season_type, first_game=None, n_games=None,
         if season_type == 'regular':
             if (int(game) - int(first_game)) >= n_games:
                 return n_games_out
-        elif season_type == 'playoffs':
+        elif season_type == 'playoff':
             _, x, y, z = [int(char) for char in game]
             if x > x_max:
                 return n_games_out
@@ -367,7 +383,7 @@ def parse_boxscore(boxscore, game_id, coaches, teams, players):
             coach_name = coach_x['fullName']
             if coach_name not in coaches:
                 coach_x.pop('link', None)
-                coach_x['CoachID'] = len(coaches)
+                coach_x['CoachID'] = len(coaches) + 1
                 coach_x['code'] = coach_dict['position']['code']
                 coach_ids[key] = len(coaches)
                 coach_x['position'] = coach_dict['position']['type']
@@ -488,9 +504,9 @@ def parse_liveData(play_data, game_id):
         # Extract data common to all events
         event_x = play['result'].copy()
         event_x.update(event_cols.copy())
-        event_x['gameID'] = game_id
-        event_x['eventID'] = play['about']['eventIdx']
-        event_x['eventID'] = event_cnt
+        event_x['GameID'] = game_id
+        # event_x['EventID'] = play['about']['eventIdx']
+        event_x['EventID'] = event_cnt
         event_cnt += 1
         event_x.pop('event', None)
         event_x.pop('eventCode', None)
@@ -627,9 +643,9 @@ def parse_shifts(shift_data):
     # Extract data common to all events
     for shift in shift_list:
         if shift['detailCode'] == 0:
-            shift_x = {'gameID': shift['gameId'],
-                       'playerId': shift['playerId'],
-                       'shiftId': shift['shiftNumber'],
+            shift_x = {'GameID': shift['gameId'],
+                       'PlayerID': shift['playerId'],
+                       'ShiftID': shift['shiftNumber'],
                        'period': shift['period'],
                        'startTime': shift['startTime'],
                        'endTime': shift['endTime']}

@@ -5,21 +5,15 @@ import datetime
 from nhl_api.api_parsers import get_game_data
 
 
+# TODO: make this just a module that is called in a script, rather than writing
+#  mains in the module (keep the project more professional)
 # Define the first and last years of the query
 first_year = 2010  # First year of recording all shot data
-last_year = 2021
+last_year = 2020
 
 # Define the season types
-seasons = ['regular', 'playoffs']
-
-# Initialize the data structures to store the data
-game_list = []
-shift_list = []
-shot_list = []
-event_list = []
-team_boxscores = []
-skater_boxscores = []
-goalie_boxscores = []
+seasons = ['regular', 'playoff']
+# seasons = ['regular']
 
 # Load existing records of players, teams and coaches already exists
 # Initialize if files do not exist
@@ -34,63 +28,71 @@ try:
     with open(f'data/teams.csv', 'r') as f:
         dict_reader = csv.DictReader(f)
         team_dicts = list(dict_reader)
-    all_teams = {team_x['teamID']: team_x for team_x in team_dicts}
+    all_teams = {team_x['TeamID']: team_x for team_x in team_dicts}
 except FileNotFoundError:
     all_teams = {}
 try:
-    with open(f'data/coaches.csv', 'r') as f:
+    with open(f'data/players.csv', 'r') as f:
         dict_reader = csv.DictReader(f)
         player_dicts = list(dict_reader)
-    all_players = {player_x['playerID']: player_x for player_x in player_dicts}
+    all_players = {player_x['PlayerID']: player_x for player_x in player_dicts}
 except FileNotFoundError:
     all_players = {}
 
 # Pull the data for all seasons in range
-f_names = ['coaches', 'players', 'teams', 'games', 'shifts', 'game_events',
-           'team_boxscores', 'skater_boxscores', 'goalie_boxscores']
 for year in range(first_year, last_year + 1):
     # Skip the COVID year
     if year == 2020:
         continue
     for i, season in enumerate(seasons):
+        # if season == 'regular':
+        #     game1 = 15
+        #     n_games = 5
+        # else:
+        #     game1 = 111
+        #     n_games = 127
+        # game_data = get_game_data(year, season, game1, n_games, coaches=all_coaches,
+        #                           teams=all_teams, players=all_players)
         t_start = time()
         game_data = get_game_data(year, season, coaches=all_coaches,
                                   teams=all_teams, players=all_players)
-        game_list += game_data[0]
-        shift_list += game_data[1]
-        event_list += game_data[2]
-        team_boxscores += game_data[3]
-        skater_boxscores += game_data[4]
-        goalie_boxscores += game_data[5]
-        # TODO: make this just a module that is called in a script, rather than writing
-        #  mains in the module (keep the project more professional)
-
+        game_list = game_data[0]
+        shift_list = game_data[1]
+        event_list = game_data[2]
+        team_boxscores = game_data[3]
+        skater_boxscores = game_data[4]
+        goalie_boxscores = game_data[5]
+        print(f'Finished the {year} {season} season')
         print(f'It took {datetime.timedelta(seconds=(time() - t_start))} to scrape '
               f'{len(game_list)} games')
+
+        f_names1 = ['games', 'shifts', 'game_events', 'team_boxscores',
+                    'skater_boxscores', 'goalie_boxscores']
         dict_lists = [game_list, shift_list, event_list, team_boxscores,
                       skater_boxscores, goalie_boxscores]
         for j, dict_list in enumerate(dict_lists):
             field_names = dict_list[0].keys()
-            fpath = f'data/{f_names[j]}.csv'
+            fpath = f'data/{f_names1[j]}.csv'
             write_header = not exists(fpath)
             with open(fpath, 'a') as csvfile:
                 writer = csv.DictWriter(csvfile, fieldnames=field_names)
-                writer.writerows(dict_list)
                 if write_header:
                     writer.writeheader()
+                writer.writerows(dict_list)
                 csvfile.close()
             write_header = False
 
-# Save the coaches, teams and players
-all_coaches_list = [coach for coach in all_coaches.values()]
-all_players_list = [player for player in all_players.values()]
-all_teams_list = [team for team in all_teams.values()]
+        # Save the coaches, teams and players
+        all_coaches_list = [coach for coach in all_coaches.values()]
+        all_players_list = [player for player in all_players.values()]
+        all_teams_list = [team for team in all_teams.values()]
 
-dict_lists = [all_coaches_list, all_players_list, all_teams_list]
-for j, dict_list in enumerate(dict_lists):
-    field_names = dict_list[0].keys()
-    with open(f'data/{f_names[j]}.csv', 'w') as csvfile:
-        writer = csv.DictWriter(csvfile, fieldnames=field_names)
-        writer.writeheader()
-        writer.writerows(dict_list)
-        csvfile.close()
+        f_names2 = ['coaches', 'players', 'teams']
+        dict_lists = [all_coaches_list, all_players_list, all_teams_list]
+        for j, dict_list in enumerate(dict_lists):
+            field_names = dict_list[0].keys()
+            with open(f'data/{f_names2[j]}.csv', 'w') as csvfile:
+                writer = csv.DictWriter(csvfile, fieldnames=field_names)
+                writer.writeheader()
+                writer.writerows(dict_list)
+                csvfile.close()
