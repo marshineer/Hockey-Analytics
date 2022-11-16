@@ -1,5 +1,6 @@
 import numpy as np
 from geopy.geocoders import Nominatim
+from geopy.adapters import AdapterHTTPError
 
 
 def convert_height_to_cm(height):
@@ -86,8 +87,13 @@ def get_venue_coords(city):
         country = 'canada'
 
     # Query the geolocator to find the location
-    loc = geolocator.geocode(f'{city}, {country}')
+    try:
+        loc = geolocator.geocode(f'{city}, {country}')
+        return loc.latitude, loc.longitude
+    except AdapterHTTPError:
+        print('Limit apparently reached')
+        return None, None
 
-    return loc.latitude, loc.longitude
-    # return 1, 1
+    # loc = geolocator.geocode(f'{city}, {country}')
+    # return loc.latitude, loc.longitude
 

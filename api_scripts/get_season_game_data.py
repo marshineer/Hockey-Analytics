@@ -1,19 +1,16 @@
 import csv
 from os.path import exists
-from time import time
+from time import time, sleep
 import datetime
 from nhl_api.api_parsers import get_game_data
 
 
-# TODO: make this just a module that is called in a script, rather than writing
-#  mains in the module (keep the project more professional)
 # Define the first and last years of the query
-first_year = 2010  # First year of recording all shot data
-last_year = 2020
+first_year = 2010
+last_year = 2021
 
 # Define the season types
 seasons = ['regular', 'playoff']
-# seasons = ['regular']
 
 # Load existing records of players, teams and coaches already exists
 # Initialize if files do not exist
@@ -41,19 +38,9 @@ except FileNotFoundError:
 
 # Pull the data for all seasons in range
 for year in range(first_year, last_year + 1):
-    # Skip the COVID year
-    if year == 2020:
-        continue
     for i, season in enumerate(seasons):
-        # if season == 'regular':
-        #     game1 = 15
-        #     n_games = 5
-        # else:
-        #     game1 = 111
-        #     n_games = 127
-        # game_data = get_game_data(year, season, game1, n_games, coaches=all_coaches,
-        #                           teams=all_teams, players=all_players)
         t_start = time()
+        print(f'\nStarting the {year} {season} season')
         game_data = get_game_data(year, season, coaches=all_coaches,
                                   teams=all_teams, players=all_players)
         game_list = game_data[0]
@@ -63,8 +50,8 @@ for year in range(first_year, last_year + 1):
         skater_boxscores = game_data[4]
         goalie_boxscores = game_data[5]
         print(f'Finished the {year} {season} season')
-        print(f'It took {datetime.timedelta(seconds=(time() - t_start))} to scrape '
-              f'{len(game_list)} games')
+        print(f'It took {datetime.timedelta(seconds=(time() - t_start))} to '
+              f'scrape {len(game_list)} games')
 
         f_names1 = ['games', 'shifts', 'game_events', 'team_boxscores',
                     'skater_boxscores', 'goalie_boxscores']
@@ -96,3 +83,6 @@ for year in range(first_year, last_year + 1):
                 writer.writeheader()
                 writer.writerows(dict_list)
                 csvfile.close()
+
+        # Delay 2 minutes to avoid getting banned by the NHL.com API
+        sleep(120)
