@@ -6,9 +6,9 @@ setup(name="hockey_analytics",
       author_email="mmykietyshyn@gmail.com",
       license="MIT",
       description="Ice hockey analytics project.",
-      long_description="This projects pulls data from the NHL.com API, creates "
-                       "an SQL nhl_database in Postgres using DBeaver, and "
-                       "generates analytics based on the available data.",
+      # long_description=open('README.md').read(),
       url="https://github.com/marshineer/Hockey-Analytics",
-      packages=["nhl_api", "nhl_database"],
-      install_requires=['requests'])
+      packages=["nhl_api"],
+      # scripts=['api_scripts/get_season_game_data.py'],
+      install_requires=['requests']
+      )

@@ -1,3 +1,5 @@
+# !/home/marshineer/anaconda3/envs/hockey python3
+
 import csv
 from os.path import exists
 from time import time, sleep
