@@ -1,6 +1,6 @@
 import requests
 from time import sleep
-from nhl_api.parsing_helpers import convert_height_to_cm, get_venue_coords
+from api_common import convert_height_to_cm, get_venue_coords
 
 
 event_cols = {'secondaryType': None,
@@ -251,210 +251,6 @@ def get_game_data(year, season_type, first_game=None, n_games=None,
                 return n_games_out
 
 
-# TODO: add functionality to request games within a date range
-def get_range_data(state_date, end_date, coaches=None, teams=None, players=None):
-    pass
-#     """ Requests and formats game data for all games in a given date range.
-#
-#     Retrieves data for all games in a date range.
-#
-#     Several
-#     types of game data are pulled, including a game summary, boxscores for teams
-#     and players, game event data (i.e. shots, goals, penalties, hits, etc...),
-#     and player shift data. The data for each game is stored in a list, and these
-#     lists are appended to as more games are retrieved.
-#
-#     Player, coach and team metadata is also accumulated. However, since this
-#     information only needs to be recorded once for each entity (coach, player or
-#     team), this data is imported from existing .csv files and appended to when a
-#     new entity is found in the game data (i.e. an entry is added only when a new
-#     player, coach or team is involved in a game).
-#
-#     Parameters
-#         state_date: str = first date in range year-month-day
-#         end_date: str = last date in range year-month-day
-#         coaches: dict = record of metadata for all coaches in dataset
-#         teams: dict = record of metadata for all teams in dataset
-#         players: dict = record of metadata for all players in dataset
-#
-#     Returns
-#         game_list: list = metadata for all games pulled
-#         shift_info: list = shift data for all players and games
-#         event_list: list = full event data for all games
-#         team_boxscores: list = home and away box scores for all games
-#         skater_boxscores: list = home and away skater box scores for all games
-#         goalie_boxscores: list = home and away goalie box scores for all games
-#     """
-#
-#     # Define the NHL.com API endpoints for game and shift data
-#     # https://statsapi.web.nhl.com/api/v1/schedule?teamId=30&startDate=2018-01-02&endDate=2018-01-02
-#     API_URL_RANGE = 'https://statsapi.web.nhl.com/api/v1/' \
-#                     'schedule?startDate={}&endDate={}'
-#     # API_URL_SHIFT = 'https://api.nhle.com/stats/rest/en/shiftcharts?cayenneExp='\
-#     #                 'gameId={}'
-#
-#     # Define the season type
-#     seasons_ids = {'regular': '02',
-#                    'playoff': '03'}
-#     season_id = seasons_ids[season_type]
-#
-#     # If pulling playoff games, the game ID format is different
-#     # '0xyz': X = round, Y = matchup, Z = game
-#     if season_type == 'regular':
-#         if first_game is None:
-#             first_game = 1
-#         if n_games is None:
-#             n_games = 10000
-#     elif season_type == 'playoff':
-#         if first_game is None:
-#             first_game = 111
-#         x_max = 4
-#         y_max = [8, 4, 2, 1]
-#         z_max = 7
-#         if n_games is not None:
-#             if (n_games > 999) | (n_games < 111):
-#                 raise ValueError("Not a valid 'n_games' value")
-#             else:
-#                 x_max = min(n_games // 100, x_max)
-#                 y_max = [min((n_games % 100) // 10, ym) for ym in y_max]
-#                 z_max = min(n_games % 10, z_max)
-#
-#     # Convert the game to a four digit string
-#     game = str(first_game).zfill(4)
-#
-#     # Initialize the lists and dictionaries, if necessary
-#     coaches = {} if coaches is None else coaches
-#     teams = {} if teams is None else teams
-#     players = {} if players is None else players
-#     team_boxscores = []
-#     skater_boxscores = []
-#     goalie_boxscores = []
-#     game_list = []
-#     event_list = []
-#     shift_list = []
-#     shift_dict = {}
-#     game_dict = {}
-#     n_games_out = {}
-#
-#     # Make requests to the NHL.com API for each game of season
-#     timeout_err = False
-#     while True:
-#         # Sleep to avoid IP getting banned
-#         if season_type == 'regular':
-#             if int(game) % 100 == 0:
-#                 sleep(30)
-#             elif int(game) % 10 == 0:
-#                 sleep(2)
-#
-#         # Define the game ID
-#         game_id = f'{str(year)}{season_id}{game}'
-#         if timeout_err:
-#             print(f'Parsing game {game_id} again after timeout/lost connection')
-#             timeout_err = False
-#         # print(game_id)
-#
-#         # Request data for a single game
-#         game_request_url = API_URL_GAME.format(game_id)
-#         try:
-#             game_dict = requests.get(game_request_url, timeout=30)
-#             game_dict.raise_for_status()
-#             game_dict = game_dict.json()
-#         except requests.exceptions.HTTPError as errh:
-#             print(errh)
-#             print(f'Could not find game info for game ID: {game_id}')
-#             if season_type == 'regular':
-#                 return n_games_out
-#             elif season_type == 'playoff':
-#                 _, x, y, z = [int(char) for char in game]
-#                 z = 1
-#                 y += 1
-#                 if y > y_max[x - 1]:
-#                     y = 1
-#                     x += 1
-#                     if x > x_max:
-#                         return n_games_out
-#                 game = f'0{x}{y}{z}'
-#                 continue
-#         except requests.exceptions.ConnectionError as errc:
-#             print(errc)
-#             print(f'Game {game_id} connection issues while pulling game data')
-#             timeout_err = True
-#             continue
-#         except requests.exceptions.Timeout as errt:
-#             print(errt)
-#             print(f'Game {game_id} timed out while pulling game data')
-#             timeout_err = True
-#             continue
-#         except requests.exceptions.RequestException as err:
-#             print(err)
-#
-#         # Request shift data for the same game
-#         shift_request_url = API_URL_SHIFT.format(game_id)
-#         try:
-#             shift_dict = requests.get(shift_request_url, timeout=30)
-#             shift_dict.raise_for_status()
-#             shift_dict = shift_dict.json()
-#         except requests.exceptions.HTTPError as errh:
-#             print(errh)
-#         except requests.exceptions.ConnectionError as errc:
-#             print(errc)
-#             print(f'Game {game_id} connection issues while pulling shift data')
-#             timeout_err = True
-#             continue
-#         except requests.exceptions.Timeout as errt:
-#             print(errt)
-#             print(f'Game {game_id} timed out while pulling shift data')
-#             timeout_err = True
-#             continue
-#         except requests.exceptions.RequestException as err:
-#             print(err)
-#
-#         # Update the game number
-#         game = str(int(game) + 1).zfill(4)
-#         if season_type == 'playoff':
-#             _, x, y, z = [int(char) for char in game]
-#             if z > z_max:
-#                 z = 1
-#                 y += 1
-#                 if y > y_max[x - 1]:
-#                     y = 1
-#                     x += 1
-#             game = f'0{x}{y}{z}'
-#
-#         # If a game record is logged, but the game data does not exist
-#         game_decision = game_dict['liveData']['decisions']
-#         if len(game_decision) == 0:
-#             print(f'No game info for game ID: {game_id}')
-#             if season_type == 'playoff' and x > x_max:
-#                 return n_games_out
-#             sleep(1)
-#             continue
-#
-#         # Extract the single game data
-#         game_output = game_parser(game_dict, game_id, coaches, teams, players)
-#         game_list.append(game_output[0])
-#         event_list += game_output[1]
-#         team_boxscores += game_output[2]
-#         skater_boxscores += game_output[3]
-#         goalie_boxscores += game_output[4]
-#
-#         # Extract the shift data
-#         shift_list += parse_shifts(shift_dict)
-#
-#         # Group outputs in tuple
-#         n_games_out = (game_list, shift_list, event_list, team_boxscores,
-#                        skater_boxscores, goalie_boxscores)
-#
-#         # Check for max number of games
-#         if season_type == 'regular':
-#             if (int(game) - int(first_game)) >= n_games:
-#                 return n_games_out
-#         elif season_type == 'playoff':
-#             _, x, y, z = [int(char) for char in game]
-#             if x > x_max:
-#                 return n_games_out
-
-
 def game_parser(game_dict, game_id, coaches, teams, players):
     """ Parses the game stats dictionary returned the NHL.com API.
 
@@ -683,6 +479,10 @@ def parse_gameData(game_data, teams, players, active_players):
         id_key = str(team_dict['id'])
         location = team_dict['venue']['city']
         if 'city' in teams[id_key]:
+            if teams[id_key]['arenaLatitude'] is None:
+                venue_lat, venue_lon = get_venue_coords(location)
+                teams[id_key]['arenaLatitude'] = venue_lon
+                teams[id_key]['arenaLlongitude'] = venue_lat
             continue
         teams[id_key]['teamName'] = team_dict.get('teamName')
         teams[id_key]['teamLocation'] = team_dict['locationName']
