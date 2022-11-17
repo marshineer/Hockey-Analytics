@@ -8,7 +8,7 @@ from nhl_api.api_parsers import get_game_data
 
 
 # Define the first and last years of the query
-first_year = 2010
+first_year = 2012
 last_year = 2021
 
 # Define the season types
@@ -17,21 +17,21 @@ seasons = ['regular', 'playoff']
 # Load existing records of players, teams and coaches already exists
 # Initialize if files do not exist
 try:
-    with open(f'data/coaches.csv', 'r') as f:
+    with open(f'../data/coaches.csv', 'r') as f:
         dict_reader = csv.DictReader(f)
         coach_dicts = list(dict_reader)
     all_coaches = {coach_x['fullName']: coach_x for coach_x in coach_dicts}
 except FileNotFoundError:
     all_coaches = {}
 try:
-    with open(f'data/teams.csv', 'r') as f:
+    with open(f'../data/teams.csv', 'r') as f:
         dict_reader = csv.DictReader(f)
         team_dicts = list(dict_reader)
     all_teams = {team_x['TeamID']: team_x for team_x in team_dicts}
 except FileNotFoundError:
     all_teams = {}
 try:
-    with open(f'data/players.csv', 'r') as f:
+    with open(f'../data/players.csv', 'r') as f:
         dict_reader = csv.DictReader(f)
         player_dicts = list(dict_reader)
     all_players = {player_x['PlayerID']: player_x for player_x in player_dicts}
