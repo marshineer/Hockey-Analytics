@@ -1,6 +1,6 @@
 import requests
 from time import sleep
-from api_common import convert_height_to_cm, get_venue_coords
+from nhl_api.api_common import convert_height_to_cm, get_venue_coords
 
 
 event_cols = {'secondaryType': None,
