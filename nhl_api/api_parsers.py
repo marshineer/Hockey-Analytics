@@ -406,6 +406,7 @@ def parse_boxscore(boxscore, game_id, coaches, teams, players):
                     player_x.pop('rosterStatus', None)
                     player_x['PlayerID'] = player_x.pop('id')
                     player_x['position'] = player_dict['position'].get('code')
+                    player_x['position2'] = player_x['position']
                     players[str(player_id)] = player_x
 
         # Extract the coach info
