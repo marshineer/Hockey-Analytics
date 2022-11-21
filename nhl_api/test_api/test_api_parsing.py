@@ -1,6 +1,7 @@
 import requests
 import pytest
 from nhl_api.api_parsers import parse_boxscore
+from nhl_api.api_common import get_games_in_season
 
 
 def get_api_game(game_id, key_list):
@@ -35,7 +36,19 @@ def get_api_game(game_id, key_list):
     return api_dict
 
 
-def test_parseBoxscore():
+def test_get_games_in_season():
+    seasons = [2010 + i for i in range(12)]
+    season_types = ['R', 'P']
+    n_games = [(1230, 89), (1230, 86), (720, 86), (1230, 93), (1230, 89),
+               (1230, 91), (1230, 87), (1271, 84), (1271, 87), (1082, 86),
+               (868, 84), (1312, 89)]
+    for i, season in enumerate(seasons):
+        for j, season_type in enumerate(season_types):
+            n_games_returned = len(get_games_in_season(season, season_type))
+            assert n_games_returned == n_games[i][j]
+
+
+def test_parse_boxscore():
     game_id = 2010021002
     key_list = ['liveData', 'boxscore', 'teams']
     boxscore = get_api_game(game_id, key_list)
@@ -54,3 +67,8 @@ def test_parseBoxscore():
             assert player['PlayerID'] in away_skaters
 
 
+def test_parse_shifts():
+    # Test whether the condition 'shift['detailCode'] == 0' catches all relevant
+    #  shifts (maybe just randomly sample from all games and see whether
+    #  description is always "None")
+    pass
