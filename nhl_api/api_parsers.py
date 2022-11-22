@@ -131,6 +131,8 @@ def game_parser(game_dict, game_id, coaches, teams, players):
     # Parse the game data and update player info
     game_info = parse_gameData(game_data, teams, players, active_players)
     game_info['shootout'] = game_dict['liveData']['linescore']['hasShootout']
+    end_period = game_dict['liveData']['linescore']['currentPeriod']
+    game_info['overtime'] = True if end_period > 3 else False
     game_info['awayCoachID'] = coach_ids.get('away')
     game_info['homeCoachID'] = coach_ids.get('home')
 
