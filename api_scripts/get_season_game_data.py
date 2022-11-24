@@ -4,8 +4,8 @@ from time import time, sleep
 from datetime import timedelta
 import os
 from nhl_api.api_parsers import get_game_data
-from nhl_api.api_common import get_games_in_season, check_dict_exist,\
-    save_nhl_data
+from nhl_api.api_common import get_games_in_season
+from nhl_api.common import check_dict_exist, save_nhl_data
 
 
 # Define the first and last years of the query
@@ -56,7 +56,7 @@ for year in range(first_year, last_year + 1):
         dict_lists = [all_coaches_list, all_players_list, all_teams_list]
         for j, dict_list in enumerate(dict_lists):
             fpath = froot + f'/../data/{f_names2[j]}.csv'
-            save_nhl_data(fpath, dict_list, False)
+            save_nhl_data(fpath, dict_list, overwrite=True)
 
         # Delay 2 minutes to avoid getting banned by the NHL.com API
         sleep(120)
