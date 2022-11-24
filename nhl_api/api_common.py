@@ -1,21 +1,8 @@
-from os.path import exists
 import requests
-import csv
 from time import sleep
-from geopy.geocoders import Nominatim
-# from geopy.adapters import AdapterHTTPError
-
-
-event_cols = {'secondaryType': None,
-              'player1ID': None,
-              'player1Type': None,
-              'player2ID': None,
-              'player2Type': None,
-              'assist1ID': None,
-              'assist2ID': None,
-              'xCoord': None,
-              'yCoord': None,
-              'PIM': None}
+from nhl_api.common import get_venue_coords, convert_height_to_cm
+from nhl_api.api_lookups import event_cols, skater_stat_cols, goalie_stat_cols,\
+    shot_types, penalty_names
 
 
 def request_json(url, game_id=None, player_id=None, n_attempt=5):
@@ -118,7 +105,8 @@ def get_games_in_season(season, game_types=None):
         game_types = ['PR', 'R', 'P']
 
     # Generate list of games
-    end_date = f'{season}-10-10'
+    # TODO: Don't forget to delete this line
+    end_date = f'{season}-10-08'
     game_list = get_games_in_range(start_date, end_date, game_types)
 
     # Remove extra games (round-robin and play-in) during COVID season
@@ -186,6 +174,20 @@ def get_player_stats(player_id):
     API_URL = f'https://statsapi.web.nhl.com/api/v1/people/{player_id}/' \
               f'stats?stats=yearByYear'
     player_json = request_json(API_URL)
+    return player_json
+
+
+def get_player_info(player_id):
+    """ Pulls the biographical info for a particular player.
+
+    Parameters
+        player_id: int = unique player identifier
+
+    Returns
+        : json = the player's biographical info
+    """
+    API_URL = f'https://statsapi.web.nhl.com/api/v1/people/{player_id}'
+    player_json = request_json(API_URL, player_id=player_id)
     return player_json
 
 
@@ -279,8 +281,41 @@ def update_players(player_dict, active_players, all_players):
             all_players[id_key]['weight_kg'] = None
 
 
-def add_player_season():
-    pass
+def add_player_season(season, player_id, player_name, player_table, goalie):
+    """ Add a single season to a list of player season-by-season stats.
+
+    Parameters
+        season: dict = all stats for a single season
+        player_id: int = unique player identifier
+        player_name: str = full name of player (for table readability)
+        player_table: list = accumulated data for all player seasons
+        goalie: bool = whether player is a goalie
+    """
+    if goalie:
+        season_x = goalie_stat_cols.copy()
+        season_x.update(season['stat'].copy())
+        season_x.pop('ties', None)
+        season_x.pop('ot', None)
+        season_x.pop('savePercentage', None)
+        season_x.pop('goalsAgainst', None)
+        season_x.pop('goalsAgainstAverage', None)
+        season_x.pop('evenStrengthSavePercentage', None)
+        season_x.pop('powerPlaySavePercentage', None)
+        season_x.pop('shortHandedSavePercentage', None)
+    else:
+        season_x = skater_stat_cols.copy()
+        season_x.update(season['stat'].copy())
+        season_x.pop('shotPct', None)
+        season_x.pop('shifts', None)
+        season_x.pop('timeOnIce', None)
+        season_x.pop('penaltyMinutes', None)
+    season_x['fullName'] = player_name
+    season_x['PlayerID'] = player_id
+    season_x['season'] = season['season']
+    season_x['TeamID'] = season.get('team', {}).get('id', None)
+    season_x['team'] = season['team']['name']
+    season_x['league'] = season['league']['name']
+    player_table.append(season_x)
 
 
 def add_coach(coach_dict, coach_ids, team, all_coaches):
@@ -355,7 +390,7 @@ def append_goalie_stats(player_stats, game_id, player_id, team, stat_list):
     stat_list.append(player_stats)
 
 
-def append_event(play, game_id, event_id, event_list):
+def append_event(play, game_id, home_id, event_id, event_list):
     """ Appends play data to a game event list.
 
     Generates a flat dictionary of data for a single game event (play),
@@ -364,6 +399,7 @@ def append_event(play, game_id, event_id, event_list):
     Parameters
         play: dict = all data (nested dict) for the game event
         game_id: int = unique game identifier
+        home_id: int = unique team identifier of home team
         event_id: int = unique event identifier
         event_list: list = all previous events occurring in game
     #
@@ -372,43 +408,50 @@ def append_event(play, game_id, event_id, event_list):
     """
 
     # Extract data common to all events (removing unwanted data)
-    event_x = play['result'].copy()
+    event_x = event_cols.copy()
+    event_x.update(play['result'].copy())
     event_x.pop('event', None)
     event_x.pop('eventCode', None)
     event_x.pop('penaltySeverity', None)
     event_x.pop('penaltyMinutes', None)
     event_x.pop('strength', None)
-    event_x.pop('emptyNet', None)
     event_x.pop('gameWinningGoal', None)
     event_x['GameID'] = game_id
     event_x['EventID'] = event_id
     event_x['period'] = play['about']['period']
+    event_x['periodType'] = play['about']['periodType']
     event_x['periodTime'] = play['about']['periodTime']
-    event_x['awayScore'] = play['about']['goals'].get('away')
-    event_x['homeScore'] = play['about']['goals'].get('home')
+    event_x['awayScore'] = play['about']['goals']['away']
+    event_x['homeScore'] = play['about']['goals']['home']
+    # event_x['awayScore'] = play['about']['goals'].get('away')
+    # event_x['homeScore'] = play['about']['goals'].get('home')
 
     # Skip regular and pre-sesason shootout events
     if str(game_id)[4:6] in ['01', '02'] and event_x['period'] == 5:
         return
 
     # Extend basic event info
-    event_x.update(event_cols.copy())
+    # event_x.update(event_cols.copy())
     if event_x['eventTypeId'] != 'STOP':
         event_x['xCoord'] = play['coordinates'].get('x')
         event_x['yCoord'] = play['coordinates'].get('y')
-    event_x['secondaryType'] = play['result'].get('secondaryType')
 
     # Add data for particular event types
+    event_team_id = play.get('team', {}).get('id', None)
     if 'players' in play:
         player_ids = [player['player']['id'] for player in play['players']]
         event_x['player1ID'] = player_ids[0]
         event_x['player1Type'] = play['players'][0]['playerType']
+        event_x['player1Home'] = home_id == event_team_id
     event_type = event_x['eventTypeId']
     if event_type in ['GOAL', 'SHOT']:
         event_x['player2ID'] = player_ids[-1]
         event_x['player2Type'] = play['players'][-1]['playerType']
         if event_type == 'GOAL':
-            if len(player_ids) == 3:
+            if len(player_ids) == 1:
+                event_x['player2ID'] = None
+                event_x['player2Type'] = None
+            elif len(player_ids) == 3:
                 event_x['assist1ID'] = player_ids[1]
             elif len(player_ids) == 4:
                 event_x['assist1ID'] = player_ids[1]
@@ -419,6 +462,25 @@ def append_event(play, game_id, event_id, event_list):
             event_x['player2Type'] = play['players'][1]['playerType']
         if event_type == 'PENALTY':
             event_x['PIM'] = play['result']['penaltyMinutes']
+    elif event_type == 'GIVEAWAY':
+        event_x['player1Type'] = 'Giver'
+    elif event_type == 'TAKEAWAY':
+        event_x['player1Type'] = 'Taker'
+
+    # Map types to shorter names
+    type2 = play['result'].get('secondaryType')
+    if event_type in ['GOAL', 'SHOT', 'MISS']:
+        event_x['secondaryType'] = shot_types.get(type2, 'OTHER')
+        # event_x['secondaryType'] = shot_types[type2]
+    elif event_type == 'PENALTY':
+        event_x['secondaryType'] = penalty_names.get(type2, 'OTHER')
+        # event_x['secondaryType'] = penalty_names[type2]
+    else:
+        event_x['secondaryType'] = type2
+        if event_type == 'BLOCKED_SHOT':
+            event_x['eventTypeId'] = 'BLOCK'
+        elif event_type == 'MISSED_SHOT':
+            event_x['eventTypeId'] = 'MISS'
 
     event_list.append(event_x)
 
@@ -460,101 +522,3 @@ def extract_game_info(game_data, active_players):
         game_data['teams']['home']['venue']['timeZone'].get('offset')
 
     return game_info
-
-
-def convert_height_to_cm(height):
-    """ Converts a height in ft and inches to cm.
-
-    The height must be a string of the format 'ft\'inches"'
-
-    Parameters
-        height: string = height to be converted
-
-    Returns
-        height_cm: float = height in cm
-    """
-
-    ft_in = height.split('\'')
-    height_cm = 2.54 * (12 * int(ft_in[0]) + int(ft_in[1][:-1]))
-    return height_cm
-
-
-def get_venue_coords(city):
-    """ Uses a geolocation library to get home team city coordinates.
-
-    Parameters
-        city: str = name of city where the home arena is located
-
-    Returns
-        loc.latitude: float = latitude of the citiy
-        loc.longitude: float = longitude of the city
-    """
-
-    # Initialize the locator
-    geolocator = Nominatim(user_agent='myGeocoder')
-
-    # Set the country
-    country = 'usa'
-    canadian_cities = ['Edmonton', 'Calgary', 'Vancouver', 'Winnipeg',
-                       'Toronto', 'Montreal', 'Ottawa']
-    if city in canadian_cities:
-        country = 'canada'
-
-    # Query the geolocator to find the location
-    try:
-        loc = geolocator.geocode(f'{city}, {country}')
-        return loc.latitude, loc.longitude
-    except Exception as e:
-        # print(e)
-        return None, None
-
-
-def check_dict_exist(fpath, id_key):
-    """ Return contents of a file if it exists, empty dict otherwise.
-
-    Check whether a .csv file containing the coach, team or player data exists.
-    If it does, pull the data and store it in a dictionary to be added to. If
-    the file does not exist, return an empty dictionary.
-
-    Parameters
-        fpath: str = relative path to the file
-        id_key: str = the unique key used to identify individual entities
-
-    Returns
-        : dict = all the coaches, teams, or players in the given file
-    """
-    try:
-        with open(fpath, 'r') as f:
-            dict_reader = csv.DictReader(f)
-            entity_dict = list(dict_reader)
-        return {entity_x[id_key]: entity_x for entity_x in entity_dict}
-    except FileNotFoundError:
-        return {}
-
-
-def save_nhl_data(fpath, data_dict, game_data=True):
-    """ Save the data to a .csv file.
-
-    Lists of flat dictionaries are saved to .csv files with keys as headers and
-    rows consisting of entries in the list. This requires that each dictionary
-    contains the same set of keys.
-
-    If the data is for games (game info, box scores, events, or shifts), append
-    to existing files or create new files. Only write a header if creating a new
-    file. If the data is a list of coaches, teams or players, overwrite the
-    existing file (always write a header).
-
-    Parameters
-        fpath: str = relative path to where the file should be saved
-        data_dict: dict = dictionary of data to be saved
-        game_data: bool = indicates whether the data is associated with games
-    """
-    field_names = data_dict[0].keys()
-    file_exists = exists(fpath)
-    f_mode = 'a' if game_data else 'w'
-    with open(fpath, f_mode) as csvfile:
-        writer = csv.DictWriter(csvfile, fieldnames=field_names)
-        if not (game_data and file_exists):
-            writer.writeheader()
-        writer.writerows(data_dict)
-        csvfile.close()

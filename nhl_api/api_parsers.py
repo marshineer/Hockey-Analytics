@@ -132,12 +132,17 @@ def game_parser(game_dict, game_id, coaches, teams, players):
     game_info = parse_gameData(game_data, teams, players, active_players)
     game_info['shootout'] = game_dict['liveData']['linescore']['hasShootout']
     end_period = game_dict['liveData']['linescore']['currentPeriod']
-    game_info['overtime'] = True if end_period > 3 else False
-    game_info['awayCoachID'] = coach_ids.get('away')
+    game_info['overtime'] = end_period > 3
+    game_info['numberPeriods'] = end_period
     game_info['homeCoachID'] = coach_ids.get('home')
+    game_info['awayCoachID'] = coach_ids.get('away')
+    home_score = boxscore['home']['teamStats']['teamSkaterStats']['goals']
+    game_info['homeScore'] = home_score
+    away_score = boxscore['away']['teamStats']['teamSkaterStats']['goals']
+    game_info['awayScore'] = away_score
 
     # Parse the game play events
-    game_events = parse_liveData(play_data, game_id)
+    game_events = parse_liveData(play_data, game_id, game_info['homeTeamId'])
 
     return game_info, game_events, team_stats, skater_stats, goalie_stats
 
@@ -268,7 +273,7 @@ def parse_gameData(game_data, teams, players, active_players):
     return game_info
 
 
-def parse_liveData(play_data, game_id):
+def parse_liveData(play_data, game_id, home_id):
     """ Parses the liveData data from the NHL.com "live" endpoint.
 
     Generates a list of game event descriptions. Only game event types that are
@@ -279,6 +284,7 @@ def parse_liveData(play_data, game_id):
     Parameters
         play_data: dict = json of all event data for a particular game
         game_id: int = unique game identifier
+        home_id: int = unique team identifier of home team
 
     Returns
         all_events: list = reformattd game events
@@ -298,7 +304,7 @@ def parse_liveData(play_data, game_id):
             continue
 
         # Extract event information
-        cm.append_event(play, game_id, event_id, all_events)
+        cm.append_event(play, game_id, home_id, event_id, all_events)
         event_id += 1
 
     return all_events
@@ -325,7 +331,35 @@ def parse_shifts(shift_data):
                        'ShiftID': shift['shiftNumber'],
                        'period': shift['period'],
                        'startTime': shift['startTime'],
-                       'endTime': shift['endTime']}
+                       'endTime': shift['endTime'],
+                       'duration': shift['duration']}
             all_shifts.append(shift_x)
 
     return all_shifts
+
+
+def parse_player_seasons(season_list, player_id, player_name, goalie=False):
+    """ Populate a player's season-by-season stats table.
+
+    Returns a list of flat dictionaries representing the player's season stats.
+    The stats may include leagues other than the NHL, although these contain
+    fewer stat categories.
+
+    Parameters
+        season_list: list = all seasons of recorded stats for the player
+        player_id: int = unique player identifier
+        player_name: str = full name of player (for table readability)
+        goalie: bool = whether player is a goalie
+
+    Returns
+        player_table: list = reformatted season-by-season player stats
+    """
+
+    all_seasons = []
+    for season in season_list:
+        n_games = season['stat'].get('games')
+        if n_games is None or n_games == 0:
+            continue
+        cm.add_player_season(season, player_id, player_name, all_seasons, goalie)
+
+    return all_seasons
