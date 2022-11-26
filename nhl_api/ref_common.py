@@ -69,22 +69,18 @@ def add_players_to_events(event_list, shift_df, games_dict):
         games_dict: dict = all games, keyed by their unique game ID
     """
 
-    # TODO: Should players be lists in single columns or have separate columns?
-    # player_key = 'player{}{}'
     player_key = 'players{}'
     old_game_id = None
     old_period = None
     for event in event_list:
         # Extract the event time
-        # event.update(players_on.copy())
         new_game_id = int(event['GameID'])
         new_period = int(event['period'])
-        # event_time = event['periodTime']
         event_sec = game_time_to_sec(event['periodTime'])
         if event_sec in [300, 1200]:
             event_sec -= 1
         # Add a second to separate shifts ending at stoppage
-        if event['eventTypeId'] == 'FACEOFF':
+        if event['eventTypeId'] == 'FACEOFF' and event_sec not in [299, 1199]:
             event_sec += 1
 
         if new_game_id != old_game_id or new_period != old_period:
@@ -106,9 +102,6 @@ def add_players_to_events(event_list, shift_df, games_dict):
             on_ice_players = list(compress(player_list, player_mask))
             event_key = player_key.format(team)
             event[event_key] = on_ice_players
-            # for n, player_id in enumerate(on_ice_players):
-            #     event_key = player_key.format(n + 1, team)
-            #     event[event_key] = player_id
 
 
 def calc_coord_diff(x1, y1, x2=None, y2=None, home_end=True, y_dist=False):

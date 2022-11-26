@@ -47,8 +47,6 @@ def get_game_data(game_ids, coaches=None, teams=None, players=None):
     game_list = []
     event_list = []
     shift_list = []
-    # shift_dict = {}
-    # game_dict = {}
     n_games_out = {}
 
     # Make requests to the NHL.com API for each game
@@ -58,7 +56,6 @@ def get_game_data(game_ids, coaches=None, teams=None, players=None):
             sleep(2)
 
         # Request data for a single game
-        # print(game_id)
         game_request_url = API_URL_GAME.format(game_id)
         game_dict = cm.request_json(game_request_url, game_id=game_id,
                                     n_attempt=10)
@@ -94,7 +91,7 @@ def get_game_data(game_ids, coaches=None, teams=None, players=None):
 
 
 def game_parser(game_dict, game_id, coaches, teams, players):
-    """ Parses the game stats dictionary returned the NHL.com API.
+    """ Parses the game statistics dictionary returned the NHL.com API.
 
     API endpoint: https://statsapi.web.nhl.com/api/v1/game/gameId/feed/live
     A request to this endpoint returns a dictionary of game stats, including

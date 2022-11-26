@@ -24,13 +24,11 @@ def request_json(url, game_id=None, player_id=None, n_attempt=5):
     Returns
         response: json = the request response in json format
     """
-    # cnt = -1
+
     while True:
-        # cnt += 1
         try:
             response = requests.get(url, timeout=30)
             response.raise_for_status()
-            # print(f'Tried {cnt} attempts')
         except requests.exceptions.HTTPError as errh:
             print(errh)
             if game_id is not None:
@@ -105,8 +103,6 @@ def get_games_in_season(season, game_types=None):
         game_types = ['PR', 'R', 'P']
 
     # Generate list of games
-    # TODO: Delete this line
-    # end_date = f'{season}-10-08'
     game_list = get_games_in_range(start_date, end_date, game_types)
 
     # Remove extra games (round-robin and play-in) during COVID season
@@ -402,9 +398,6 @@ def append_event(play, game_id, home_id, event_id, event_list):
         home_id: int = unique team identifier of home team
         event_id: int = unique event identifier
         event_list: list = all previous events occurring in game
-    #
-    # Returns
-    #     event_x: dict = extracted data (flat dict) for the game event
     """
 
     # Extract data common to all events (removing unwanted data)
@@ -423,8 +416,6 @@ def append_event(play, game_id, home_id, event_id, event_list):
     event_x['periodTime'] = play['about']['periodTime']
     event_x['awayScore'] = play['about']['goals']['away']
     event_x['homeScore'] = play['about']['goals']['home']
-    # event_x['awayScore'] = play['about']['goals'].get('away')
-    # event_x['homeScore'] = play['about']['goals'].get('home')
 
     # Skip regular and pre-sesason shootout events
     if str(game_id)[4:6] in ['01', '02'] and event_x['period'] == 5:
@@ -471,10 +462,8 @@ def append_event(play, game_id, home_id, event_id, event_list):
     type2 = play['result'].get('secondaryType')
     if event_type in ['GOAL', 'SHOT', 'MISS']:
         event_x['secondaryType'] = shot_types.get(type2, 'OTHER')
-        # event_x['secondaryType'] = shot_types[type2]
     elif event_type == 'PENALTY':
         event_x['secondaryType'] = penalty_names.get(type2, 'OTHER')
-        # event_x['secondaryType'] = penalty_names[type2]
     else:
         event_x['secondaryType'] = type2
         if event_type == 'BLOCKED_SHOT':

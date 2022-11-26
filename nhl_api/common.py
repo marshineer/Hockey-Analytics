@@ -1,7 +1,6 @@
 from os.path import exists
 import csv
 from geopy.geocoders import Nominatim
-# from geopy.adapters import AdapterHTTPError
 
 
 def convert_height_to_cm(height):
@@ -23,6 +22,11 @@ def convert_height_to_cm(height):
 
 def get_venue_coords(city):
     """ Uses a geolocation library to get home team city coordinates.
+
+    If any exception occurs, return (None, None). This is left intentionally
+    broad because this data is non-critical, and it can easily be found later.
+    It is not worth handling each individual exception or breaking the program
+    for when this operation does not work.
 
     Parameters
         city: str = name of city where the home arena is located
@@ -47,7 +51,7 @@ def get_venue_coords(city):
         loc = geolocator.geocode(f'{city}, {country}')
         return loc.latitude, loc.longitude
     except Exception as e:
-        # print(e)
+        print(e)
         return None, None
 
 

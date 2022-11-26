@@ -11,13 +11,10 @@ from nhl_api.common import save_nhl_data
 #  Maybe this causes some issues when combining with other data later?
 # 'https://github.com/HarryShomer/Hockey-Scraper/blob/master/hockey_scraper/
 #  utils/player_name_fixes.json'
+
 # Load the player list
 froot = str(os.path.dirname(__file__))
 fpath = froot + f'/../data/players.csv'
-# with open(fpath, 'r') as f:
-#     dict_reader = csv.DictReader(f)
-#     player_dict = list(dict_reader)
-# players = {player_x['PlayerID']: player_x for player_x in player_dict}
 players_df = pd.read_csv(fpath)
 player_dict = players_df.to_dict('records')
 players = {player_x['PlayerID']: player_x for player_x in player_dict}

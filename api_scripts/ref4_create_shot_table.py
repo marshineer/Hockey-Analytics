@@ -1,5 +1,7 @@
 import os
 import csv
+from time import time
+from datetime import timedelta
 from nhl_api.ref_common import game_time_to_sec, calc_coord_diff,\
     calc_net_angle, calc_angle_diff
 from nhl_api.common import save_nhl_data
@@ -7,9 +9,8 @@ from nhl_api.common import save_nhl_data
 
 # TODO: Other values that should be incorporated in the shot table:
 #  p(goal), p(rebound), p(on_net), p(frozen)
-# TODO: update empytNet bool in both events and shots? (No probably not)
-# TODO: If previous event was a shot OR BLOCK in the last X seconds, the shot
-#  is a rebound. HOWEVER, these rebounds should not count towards p(rebound)
+# TODO: Block rebounds should not count towards p(rebound)
+# TODO: Update empytNet bool in both events and shots? (No probably not)
 
 # Initialize shot booleans
 shot_bools = {'goal': False,
@@ -23,33 +24,26 @@ shot_bools = {'goal': False,
 froot = str(os.path.dirname(__file__))
 
 # Load the event data as a list
-# event_df = pd.read_csv(froot + f'/../data/game_events.csv')
 with open(froot + f'/../data/game_events.csv', 'r') as f:
     dict_reader = csv.DictReader(f)
     all_events = list(dict_reader)
 
 # Load the player data at a dictionary
-# # players = pd.read_csv(froot + f'/../data/players.csv')
-# # player_list = players.to_dict('records')
-# # players = {player_x['PlayerID']: player_x for player_x in player_list}
-# player_df = pd.read_csv(froot + f'/../data/players.csv')
-# players = player_df.set_index('PlayerID').to_dict('records')
 with open(froot + f'/../data/players.csv', 'r') as f:
     dict_reader = csv.DictReader(f)
     player_dict = list(dict_reader)
 players = {player_x['PlayerID']: player_x for player_x in player_dict}
 
 # Extract shot events to construct a shot table
-# shot_types = ['GOAL', 'SHOT', 'MISSED_SHOT', 'BLOCKED_SHOT']
 shot_types = ['GOAL', 'SHOT', 'MISS', 'BLOCK']
-# shot_df = event_df[event_df.eventTypeId.isin(shot_types)]
 
 last_event = None
 last_game_id = None
 last_shot = {}
-# shot_cnt = 0
 shot_id = 1
 shot_list = []
+t_start = time()
+print('Starting shot table generation')
 for i, event_x in enumerate(all_events):
     # If the event is not a shot, continue
     event_type = event_x['eventTypeId']
@@ -58,7 +52,6 @@ for i, event_x in enumerate(all_events):
         continue
     shot_x = event_x.copy()
     shot_x.update(shot_bools.copy())
-    # shot_cnt += 1
 
     # If it is a new game, reset the shot ID
     if last_game_id != event_x['GameID']:
@@ -70,12 +63,9 @@ for i, event_x in enumerate(all_events):
     if event_type == 'BLOCK':
         shot_x['shooterID'] = int(float(shot_x.pop('player2ID')))
         shot_x['shooterHome'] = not eval(shot_x['shooterHome'])
-        # shot_x['eventTypeId'] = 'BLOCK'
     else:
         shot_x['shooterID'] = int(float(shot_x.pop('player1ID')))
         shot_x['shooterHome'] = eval(shot_x['shooterHome'])
-    # if event_type == 'MISS':
-    #     shot_x['eventTypeId'] = 'MISS'
     shot_x['shotType'] = shot_x.pop('secondaryType')
     shot_x['shotResult'] = shot_x.pop('eventTypeId')
 
@@ -156,6 +146,9 @@ for i, event_x in enumerate(all_events):
     last_event = event_x.copy()
     shot_list.append(shot_x)
     shot_id += 1
+
+print(f'It took {timedelta(seconds=(time() - t_start))} to create a table '
+      f'of {len(shot_list)} shots')
 
 # Save the new shot table
 save_nhl_data(froot + f'/../data/shots.csv', shot_list, overwrite=True)

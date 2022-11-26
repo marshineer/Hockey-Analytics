@@ -31,8 +31,6 @@ t_start = time()
 for game_id in game_ids:
     game_mask = sorted_events.loc[sorted_events.GameID == game_id].index.values
     sorted_events.loc[game_mask, 'EventID'] = range(1, len(game_mask) + 1)
-    # n_events = len(sorted_events.loc[sorted_events.GameID == game_id])
-    # sorted_events.loc[sorted_events.GameID == game_id, 'EventID'] = range(1, n_events + 1)
 print(f'It took {timedelta(seconds=(time() - t_start))} to renumber '
       f'the event IDs')
 
