@@ -1,58 +1,42 @@
 # !/home/marshineer/anaconda3/envs/hockey python3
 
-import csv
-from os.path import exists
 from time import time, sleep
-import datetime
+from datetime import timedelta
+import os
 from nhl_api.api_parsers import get_game_data
+from nhl_api.api_common import get_games_in_season
+from nhl_api.common import check_dict_exist, save_nhl_data
 
 
 # Define the first and last years of the query
 first_year = 2010
 last_year = 2021
-
-# Define the season types
-seasons = ['regular', 'playoff']
+season_types = [['R'], ['P']]
+season_name = ['regular', 'playoff']
 
 # Load existing records of players, teams and coaches already exists
 # Initialize if files do not exist
-try:
-    with open(f'data/coaches.csv', 'r') as f:
-        dict_reader = csv.DictReader(f)
-        coach_dicts = list(dict_reader)
-    all_coaches = {coach_x['fullName']: coach_x for coach_x in coach_dicts}
-except FileNotFoundError:
-    all_coaches = {}
-try:
-    with open(f'data/teams.csv', 'r') as f:
-        dict_reader = csv.DictReader(f)
-        team_dicts = list(dict_reader)
-    all_teams = {team_x['TeamID']: team_x for team_x in team_dicts}
-except FileNotFoundError:
-    all_teams = {}
-try:
-    with open(f'data/players.csv', 'r') as f:
-        dict_reader = csv.DictReader(f)
-        player_dicts = list(dict_reader)
-    all_players = {player_x['PlayerID']: player_x for player_x in player_dicts}
-except FileNotFoundError:
-    all_players = {}
+all_coaches = check_dict_exist('../data/coaches.csv', 'fullName')
+all_teams = check_dict_exist('../data/teams.csv', 'TeamID')
+all_players = check_dict_exist('../data/players.csv', 'PlayerID')
 
 # Pull the data for all seasons in range
+froot = str(os.path.dirname(__file__))
 for year in range(first_year, last_year + 1):
-    for i, season in enumerate(seasons):
+    for i, season_type in enumerate(season_types):
         t_start = time()
-        print(f'\nStarting the {year} {season} season')
-        game_data = get_game_data(year, season, coaches=all_coaches,
-                                  teams=all_teams, players=all_players)
+        print(f'\nStarting the {year} {season_name[i]} season')
+        game_ids = get_games_in_season(year, season_type)
+        game_data = get_game_data(game_ids, coaches=all_coaches, teams=all_teams,
+                                  players=all_players)
         game_list = game_data[0]
         shift_list = game_data[1]
         event_list = game_data[2]
         team_boxscores = game_data[3]
         skater_boxscores = game_data[4]
         goalie_boxscores = game_data[5]
-        print(f'Finished the {year} {season} season')
-        print(f'It took {datetime.timedelta(seconds=(time() - t_start))} to '
+        print(f'Finished the {year} {season_name[i]} season')
+        print(f'It took {timedelta(seconds=(time() - t_start))} to '
               f'scrape {len(game_list)} games')
 
         f_names1 = ['games', 'shifts', 'game_events', 'team_boxscores',
@@ -60,16 +44,8 @@ for year in range(first_year, last_year + 1):
         dict_lists = [game_list, shift_list, event_list, team_boxscores,
                       skater_boxscores, goalie_boxscores]
         for j, dict_list in enumerate(dict_lists):
-            field_names = dict_list[0].keys()
-            fpath = f'data/{f_names1[j]}.csv'
-            write_header = not exists(fpath)
-            with open(fpath, 'a') as csvfile:
-                writer = csv.DictWriter(csvfile, fieldnames=field_names)
-                if write_header:
-                    writer.writeheader()
-                writer.writerows(dict_list)
-                csvfile.close()
-            write_header = False
+            fpath = froot + f'/../data/{f_names1[j]}.csv'
+            save_nhl_data(fpath, dict_list)
 
         # Save the coaches, teams and players
         all_coaches_list = [coach for coach in all_coaches.values()]
@@ -79,12 +55,8 @@ for year in range(first_year, last_year + 1):
         f_names2 = ['coaches', 'players', 'teams']
         dict_lists = [all_coaches_list, all_players_list, all_teams_list]
         for j, dict_list in enumerate(dict_lists):
-            field_names = dict_list[0].keys()
-            with open(f'data/{f_names2[j]}.csv', 'w') as csvfile:
-                writer = csv.DictWriter(csvfile, fieldnames=field_names)
-                writer.writeheader()
-                writer.writerows(dict_list)
-                csvfile.close()
+            fpath = froot + f'/../data/{f_names2[j]}.csv'
+            save_nhl_data(fpath, dict_list, overwrite=True)
 
         # Delay 2 minutes to avoid getting banned by the NHL.com API
         sleep(120)

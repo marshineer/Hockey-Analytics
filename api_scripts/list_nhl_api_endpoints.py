@@ -1,4 +1,4 @@
-from nhl_api.api_parsers import request_json
+from nhl_api.api_common import request_json
 
 
 # Define the NHL.com API url
