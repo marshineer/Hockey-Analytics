@@ -1,9 +1,6 @@
-# class Team():
-#     """
-#
-#     """
-#
-# class Player():
-#     """
-#
-#     """
+class Team():
+    pass
+
+
+class Player():
+    pass
