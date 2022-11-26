@@ -360,6 +360,8 @@ def parse_player_seasons(season_list, player_id, player_name, goalie=False):
         n_games = season['stat'].get('games')
         if n_games is None or n_games == 0:
             continue
+        elif goalie and season['stat'].get('wins') is None:
+            continue
         cm.add_player_season(season, player_id, player_name, all_seasons, goalie)
 
     return all_seasons

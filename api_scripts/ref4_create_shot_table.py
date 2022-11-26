@@ -1,6 +1,5 @@
 import os
 import csv
-import pandas as pd
 from nhl_api.ref_common import game_time_to_sec, calc_coord_diff,\
     calc_net_angle, calc_angle_diff
 from nhl_api.common import save_nhl_data
@@ -16,6 +15,7 @@ from nhl_api.common import save_nhl_data
 shot_bools = {'goal': False,
               'missed': False,
               'blocked': False,
+              'reboundShot': False,
               'playEnds': False,
               'puckFrozen': False}
 
@@ -123,7 +123,8 @@ for i, event_x in enumerate(all_events):
     # TODO: Make sure this works for end of period
     #  (it should because period always begins w/ a face-off -> never w/ a shot)
     shot_x['timeSinceLast'] = delta_t
-    shot_x['reboundShot'] = last_type in ['SHOT', 'BLOCK'] and delta_t < 3
+    if last_type in ['SHOT', 'BLOCK'] and delta_t < 3:
+        shot_x['reboundShot'] = True
     last_x, last_y = float(last_event['xCoord']), float(last_event['yCoord'])
     shot_x['lastXCoord'] = last_x
     shot_x['lastYCoord'] = last_y
@@ -136,7 +137,8 @@ for i, event_x in enumerate(all_events):
         next_type = all_events[i + 1]['eventTypeId']
         shot_x['playEnds'] = next_type == 'STOP'
         reason = all_events[i + 1]['description']
-        shot_x['puckFrozen'] = next_type == 'STOP' and reason == 'Puck Frozen'
+        if next_type == 'STOP' and reason == 'Puck Frozen':
+            shot_x['puckFrozen'] = True
 
     # Pop unwanted columns
     shot_x.pop('EventID', None)
@@ -150,10 +152,10 @@ for i, event_x in enumerate(all_events):
     shot_x.pop('assist2ID', None)
     shot_x.pop('PIM', None)
 
-    # last_shot = shot_list[shot_cnt - 1]
     last_shot = shot_x.copy()
     last_event = event_x.copy()
     shot_list.append(shot_x)
+    shot_id += 1
 
 # Save the new shot table
 save_nhl_data(froot + f'/../data/shots.csv', shot_list, overwrite=True)

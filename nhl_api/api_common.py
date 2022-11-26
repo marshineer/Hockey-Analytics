@@ -97,7 +97,7 @@ def get_games_in_season(season, game_types=None):
     end_date = f'{season + 1}-08-31'
     if season == 2019:
         end_date = '2020-12-31'
-    if season == 2020:
+    elif season == 2020:
         end_date = '2021-07-31'
 
     # Set the game types to return
@@ -105,8 +105,8 @@ def get_games_in_season(season, game_types=None):
         game_types = ['PR', 'R', 'P']
 
     # Generate list of games
-    # TODO: Don't forget to delete this line
-    end_date = f'{season}-10-08'
+    # TODO: Delete this line
+    # end_date = f'{season}-10-08'
     game_list = get_games_in_range(start_date, end_date, game_types)
 
     # Remove extra games (round-robin and play-in) during COVID season
@@ -351,7 +351,7 @@ def append_team_stats(team_dict, game_id, team, stat_list):
     team_stat_line.pop('powerPlayPercentage', None)
     team_stat_line['GameID'] = game_id
     team_stat_line['TeamID'] = team_dict['team']['id']
-    team_stat_line['HomeTeam'] = 1 if team == 'home' else 0
+    team_stat_line['HomeTeam'] = team == 'home'
     stat_list.append(team_stat_line)
 
 
@@ -367,7 +367,7 @@ def append_skater_stats(player_stats, game_id, player_id, team, stat_list):
     player_stats.pop('faceOffPct', None)
     player_stats['GameID'] = game_id
     player_stats['PlayerID'] = player_id
-    player_stats['homeTeam'] = 1 if team == 'home' else 0
+    player_stats['homeTeam'] = team == 'home'
     stat_list.append(player_stats)
 
 
@@ -386,7 +386,7 @@ def append_goalie_stats(player_stats, game_id, player_id, team, stat_list):
     player_stats.pop('evenStrengthSavePercentage', None)
     player_stats['GameID'] = game_id
     player_stats['PlayerID'] = player_id
-    player_stats['homeTeam'] = 1 if team == 'home' else 0
+    player_stats['homeTeam'] = team == 'home'
     stat_list.append(player_stats)
 
 
