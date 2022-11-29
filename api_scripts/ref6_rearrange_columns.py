@@ -6,7 +6,7 @@ from nhl_api.common import save_nhl_data
 
 
 # Dynamically set the CWD
-froot = str(os.path.dirname(__file__))
+froot = os.path.dirname(__file__)
 
 # Initiate start time
 t_start = time()
@@ -19,7 +19,7 @@ team_cols = ['TeamID', 'abbreviation', 'teamLocation', 'teamName', 'arenaCity',
 teams_df = teams_df[team_cols]
 teams_df.sort_values('TeamID')
 new_teams = teams_df.to_dict('records')
-save_nhl_data(froot + f'/../data/teams.csv', new_teams, overwrite=True)
+save_nhl_data(froot + '/../data/teams.csv', new_teams, overwrite=True)
 
 # Update coaches columns
 print('Renaming and ordering coaches columns')
@@ -28,7 +28,7 @@ coach_cols = ['CoachID', 'fullName', 'code', 'position']
 coaches_df = coaches_df[coach_cols]
 coaches_df.sort_values('CoachID')
 new_coaches = coaches_df.to_dict('records')
-save_nhl_data(froot + f'/../data/coaches.csv', new_coaches, overwrite=True)
+save_nhl_data(froot + '/../data/coaches.csv', new_coaches, overwrite=True)
 
 # Update players columns
 print('Renaming and ordering players columns')
@@ -40,7 +40,7 @@ players_df = players_df[player_cols]
 players_df.sort_values('PlayerID')
 players_df.sort_values(['position2', 'fullName'])
 new_players = players_df.to_dict('records')
-save_nhl_data(froot + f'/../data/players.csv', new_players, overwrite=True)
+save_nhl_data(froot + '/../data/players.csv', new_players, overwrite=True)
 
 f_names1 = ['games', 'shifts', 'game_events', 'team_boxscores',
             'skater_boxscores', 'goalie_boxscores']
@@ -56,7 +56,7 @@ event_cols = ['GameID', 'EventID', 'eventTypeId', 'secondaryType', 'description'
 events_df = events_df[event_cols]
 events_df.sort_values(['GameID', 'EventID'])
 new_events = events_df.to_dict('records')
-save_nhl_data(froot + f'/../data/game_events.csv', new_events, overwrite=True)
+save_nhl_data(froot + '/../data/game_events.csv', new_events, overwrite=True)
 
 # Update shots columns
 print('Renaming and ordering shot columns')
@@ -71,7 +71,7 @@ shot_cols = ['GameID', 'ShotID', 'shooterID', 'shotType', 'shotResult', 'period'
 shots_df = shots_df[shot_cols]
 shots_df.sort_values(['GameID', 'ShotID'])
 new_shots = shots_df.to_dict('records')
-save_nhl_data(froot + f'/../data/shots.csv', new_shots, overwrite=True)
+save_nhl_data(froot + '/../data/shots.csv', new_shots, overwrite=True)
 
 # Update games columns
 print('Renaming and ordering games columns')
@@ -84,39 +84,43 @@ game_cols = ['GameID', 'season', 'type', 'homeTeamId', 'awayTeamId',
 games_df = games_df[game_cols]
 games_df.sort_values('GameID')
 new_games = games_df.to_dict('records')
-save_nhl_data(froot + f'/../data/games.csv', new_games, overwrite=True)
+save_nhl_data(froot + '/../data/games.csv', new_games, overwrite=True)
 
 # Update team box score columns
 print('Renaming and ordering team box score columns')
 team_box_df = pd.read_csv(froot + f'/../data/team_boxscores.csv')
-team_box_cols = ['GameID', 'TeamID', 'HomeTeam', 'goals', 'shots', 'blocked',
-                 'hits', 'pim', 'powerPlayGoals', 'powerPlayOpportunities',
+team_box_cols = ['GameID', 'TeamID', 'HomeTeam', 'goals', 'shots', 'hits',
+                 'blocked', 'powerPlayGoals', 'powerPlayOpportunities', 'pim',
                  'faceOffWinPercentage', 'takeaways', 'giveaways']
 team_box_df = team_box_df[team_box_cols]
+new_team_box_cols = ['GameID', 'TeamID', 'homeTeam', 'goals', 'shots', 'hits',
+                     'blocks', 'PPG', 'PPs', 'PIM', 'faceoffPct', 'takeaways',
+                     'giveaways']
+team_box_df.columns = new_team_box_cols
 team_box_df.sort_values(['GameID', 'HomeTeam'])
 new_team_box = team_box_df.to_dict('records')
-save_nhl_data(froot + f'/../data/team_boxscores.csv', new_team_box,
+save_nhl_data(froot + '/../data/team_boxscores.csv', new_team_box,
               overwrite=True)
 
 # Update skater box score columns
 print('Renaming and ordering skater box score columns')
 skater_box_df = pd.read_csv(froot + f'/../data/skater_boxscores.csv')
 skater_box_cols = ['GameID', 'PlayerID', 'homeTeam', 'goals', 'assists', 'shots',
-                   'hits', 'blocked', 'takeaways', 'giveaways', 'penaltyMinutes',
-                   'plusMinus', 'faceOffWins', 'faceoffTaken', 'powerPlayGoals',
-                   'powerPlayAssists', 'shortHandedGoals', 'shortHandedAssists',
-                   'evenTimeOnIce', 'powerPlayTimeOnIce', 'shortHandedTimeOnIce',
-                   'timeOnIce']
+                   'hits', 'blocked',  'powerPlayGoals', 'powerPlayAssists',
+                   'shortHandedGoals', 'shortHandedAssists', 'penaltyMinutes',
+                   'plusMinus', 'faceOffWins', 'faceoffTaken', 'takeaways',
+                   'giveaways', 'evenTimeOnIce', 'powerPlayTimeOnIce',
+                   'shortHandedTimeOnIce', 'timeOnIce']
 skater_box_df = skater_box_df[skater_box_cols]
 new_skater_box_cols = ['GameID', 'PlayerID', 'homeTeam', 'goals', 'assists',
-                       'shots', 'hits', 'blocks', 'takeaways', 'giveaways',
+                       'shots', 'hits', 'blocks', 'PPG', 'PPA', 'SHG', 'SHA',
                        'PIM', 'plusMinus', 'faceOffWins', 'faceoffTaken',
-                       'PPG', 'PPA', 'SHG', 'SHA', 'evenTOI', 'PP_TOI',
-                       'SH_TOI', 'TOI']
+                       'takeaways', 'giveaways', 'evenTOI', 'PP_TOI', 'SH_TOI',
+                       'TOI']
 skater_box_df.columns = new_skater_box_cols
 skater_box_df.sort_values(['GameID', 'homeTeam'])
 new_skater_box = skater_box_df.to_dict('records')
-save_nhl_data(froot + f'/../data/skater_boxscores.csv', new_skater_box,
+save_nhl_data(froot + '/../data/skater_boxscores.csv', new_skater_box,
               overwrite=True)
 
 # Update skater season columns
@@ -138,7 +142,7 @@ new_skater_season_cols = ['PlayerID', 'fullName', 'TeamID', 'team', 'league',
 skater_season_df.columns = new_skater_season_cols
 skater_season_df.sort_values(['PlayerID', 'season'])
 new_skater_seasons = skater_season_df.to_dict('records')
-save_nhl_data(froot + f'/../data/skater_seasons.csv', new_skater_seasons,
+save_nhl_data(froot + '/../data/skater_seasons.csv', new_skater_seasons,
               overwrite=True)
 
 # Update goalie box score columns
@@ -157,7 +161,7 @@ goalie_box_df.columns = goalie_new_box_cols
 goalie_box_df.sort_values(['GameID', 'homeTeam', 'TOI'],
                           ascending=[True, True, False])
 new_goalie_box = goalie_box_df.to_dict('records')
-save_nhl_data(froot + f'/../data/goalie_boxscores.csv', new_goalie_box,
+save_nhl_data(froot + '/../data/goalie_boxscores.csv', new_goalie_box,
               overwrite=True)
 
 # Update goalie season columns
@@ -177,7 +181,7 @@ new_goalie_season_cols = ['PlayerID', 'fullName', 'TeamID', 'team', 'league',
 goalie_season_df.columns = new_goalie_season_cols
 goalie_season_df.sort_values(['PlayerID', 'season'])
 new_goalie_seasons = goalie_season_df.to_dict('records')
-save_nhl_data(froot + f'/../data/goalie_seasons.csv', new_goalie_seasons,
+save_nhl_data(froot + '/../data/goalie_seasons.csv', new_goalie_seasons,
               overwrite=True)
 
 print(f'\nIt took {timedelta(seconds=(time() - t_start))} to rename all tables')

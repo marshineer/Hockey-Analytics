@@ -11,7 +11,7 @@ from nhl_api.common import save_nhl_data
 froot = str(os.path.dirname(__file__))
 
 # Load the game info
-games_df = pd.read_csv(froot + f'/../data/games.csv')
+games_df = pd.read_csv(froot + '/../data/games.csv')
 games_dict = games_df.to_dict('records')
 games = {game_x['GameID']: game_x for game_x in games_dict}
 
@@ -21,8 +21,8 @@ for g_dict in games.values():
     g_dict['activeAwayPlayers'] = eval(g_dict['activeAwayPlayers'])
 
 # Load the shift data as a data frame and event data as a list
-shifts_df = pd.read_csv(froot + f'/../data/shifts.csv')
-with open(froot + f'/../data/game_events.csv', 'r') as f:
+shifts_df = pd.read_csv(froot + '/../data/shifts.csv')
+with open(froot + '/../data/game_events.csv', 'r') as f:
     dict_reader = csv.DictReader(f)
     all_events = list(dict_reader)
 
@@ -34,4 +34,4 @@ print(f'It took {timedelta(seconds=(time() - t_start))} to add players to '
       f'the events of {len(games)} games ({len(all_events)} events)')
 
 # Save the updated game event data
-save_nhl_data(froot + f'/../data/game_events.csv', all_events, overwrite=True)
+save_nhl_data(froot + '/../data/game_events.csv', all_events, overwrite=True)
