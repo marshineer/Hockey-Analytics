@@ -89,10 +89,14 @@ save_nhl_data(froot + f'/../data/games.csv', new_games, overwrite=True)
 # Update team box score columns
 print('Renaming and ordering team box score columns')
 team_box_df = pd.read_csv(froot + f'/../data/team_boxscores.csv')
-team_box_cols = ['GameID', 'TeamID', 'HomeTeam', 'goals', 'shots', 'blocked',
-                 'hits', 'pim', 'powerPlayGoals', 'powerPlayOpportunities',
+team_box_cols = ['GameID', 'TeamID', 'HomeTeam', 'goals', 'shots', 'hits',
+                 'blocked', 'pim', 'powerPlayGoals', 'powerPlayOpportunities',
                  'faceOffWinPercentage', 'takeaways', 'giveaways']
 team_box_df = team_box_df[team_box_cols]
+new_team_box_cols = ['GameID', 'TeamID', 'HomeTeam', 'goals', 'shots', 'hits',
+                     'blocks', 'PIM', 'PPG', 'PPs', 'faceoffPct', 'takeaways',
+                     'giveaways']
+team_box_df.columns = new_team_box_cols
 team_box_df.sort_values(['GameID', 'HomeTeam'])
 new_team_box = team_box_df.to_dict('records')
 save_nhl_data(froot + f'/../data/team_boxscores.csv', new_team_box,
@@ -102,17 +106,17 @@ save_nhl_data(froot + f'/../data/team_boxscores.csv', new_team_box,
 print('Renaming and ordering skater box score columns')
 skater_box_df = pd.read_csv(froot + f'/../data/skater_boxscores.csv')
 skater_box_cols = ['GameID', 'PlayerID', 'homeTeam', 'goals', 'assists', 'shots',
-                   'hits', 'blocked', 'takeaways', 'giveaways', 'penaltyMinutes',
-                   'plusMinus', 'faceOffWins', 'faceoffTaken', 'powerPlayGoals',
-                   'powerPlayAssists', 'shortHandedGoals', 'shortHandedAssists',
-                   'evenTimeOnIce', 'powerPlayTimeOnIce', 'shortHandedTimeOnIce',
-                   'timeOnIce']
+                   'hits', 'blocked', 'penaltyMinutes', 'plusMinus',
+                   'faceOffWins', 'faceoffTaken', 'takeaways', 'giveaways',
+                   'powerPlayGoals', 'powerPlayAssists', 'shortHandedGoals',
+                   'shortHandedAssists', 'evenTimeOnIce', 'powerPlayTimeOnIce',
+                   'shortHandedTimeOnIce', 'timeOnIce']
 skater_box_df = skater_box_df[skater_box_cols]
 new_skater_box_cols = ['GameID', 'PlayerID', 'homeTeam', 'goals', 'assists',
-                       'shots', 'hits', 'blocks', 'takeaways', 'giveaways',
-                       'PIM', 'plusMinus', 'faceOffWins', 'faceoffTaken',
-                       'PPG', 'PPA', 'SHG', 'SHA', 'evenTOI', 'PP_TOI',
-                       'SH_TOI', 'TOI']
+                       'shots', 'hits', 'blocks', 'PIM', 'plusMinus',
+                       'faceOffWins', 'faceoffTaken', 'takeaways', 'giveaways',
+                       'PPG', 'PPA', 'SHG', 'SHA', 'evenTOI', 'PP_TOI', 'SH_TOI',
+                       'TOI']
 skater_box_df.columns = new_skater_box_cols
 skater_box_df.sort_values(['GameID', 'homeTeam'])
 new_skater_box = skater_box_df.to_dict('records')
@@ -171,7 +175,7 @@ goalie_season_cols = ['PlayerID', 'fullName', 'TeamID', 'team', 'league',
                       'timeOnIce']
 goalie_season_df = goalie_season_df[goalie_season_cols]
 new_goalie_season_cols = ['PlayerID', 'fullName', 'TeamID', 'team', 'league',
-                          'season', 'games', 'starts', 'W', 'L', 'saves',
+                          'season', 'games', 'starts', 'wins', 'losses', 'saves',
                           'shots', 'shutouts', 'GAA', 'savesEven', 'shotsEven',
                           'savesPP', 'shotsPP', 'savesSH', 'shotsSH', 'TOI']
 goalie_season_df.columns = new_goalie_season_cols
