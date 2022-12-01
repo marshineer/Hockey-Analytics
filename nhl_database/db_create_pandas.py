@@ -1,7 +1,7 @@
 import os
 import pandas as pd
 from sqlalchemy import create_engine
-from nhl_database.postgres_common import get_file_names, store_data
+from nhl_database.db_common import get_file_names
 
 
 # Initiate a database connection engine
@@ -18,4 +18,4 @@ data_files = get_file_names(fpath)
 print(data_files)
 for file, name in zip(data_files, tables):
     data = pd.read_csv(fpath + file)
-    store_data(data, name, db_engine)
+    data.to_sql(name=name, con=db_engine, if_exists='append', index=False)
