@@ -4,10 +4,10 @@ from numpy import nan
 
 
 def generator_from_csv(fpath, iter_chunk=100):
-    """ Returns an iterator that will cycle through all rows in a csv file
+    """ Returns an iterator that will cycle through all rows in a csv file.
 
-    Reference: https://realpython.com/introduction-to-python-generators/
-    Also: https://stackoverflow.com/questions/17444679/reading-a-huge-csv-file
+    The iterator can pass the rows in chunks of a given size. This is used to
+    increase the speed of database insertion operations.
 
     Parameters
         fpath: str = relative path to file
