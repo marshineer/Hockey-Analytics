@@ -2,15 +2,9 @@ from sqlalchemy import MetaData, Table, Column
 from sqlalchemy import Integer, String, Float, Boolean, DateTime, ForeignKey
 
 
-# References
-# SQL Alchemy Docs and Quick Start Guide
-# https://docs.sqlalchemy.org/en/14/index.html
-# https://docs.sqlalchemy.org/en/14/orm/quickstart.html
-# Setting up metadata in Core
-# https://docs.sqlalchemy.org/en/14/tutorial/metadata.html#tutorial-working-with-metadata
-# If getting IntegrityError due to foreign key constraints
-# https://stackoverflow.com/questions/10525797/sqlalchemy-relation-table-with-composite-primary-key
-
+# TODO: Change column names to lower case with underscores
+# TODO: Need to fix goalie_boxscores TOI column and coaches title and abbr. cols
+#  (they are currently filling with NULL)
 meta = MetaData()
 
 teams = Table(
@@ -144,8 +138,8 @@ shots = Table(
     Column('playersAway', String),
 )
 
-team_box_scores = Table(
-    'team_box_scores', meta,
+team_boxscores = Table(
+    'team_boxscores', meta,
     Column('GameID', ForeignKey('games.GameID'), primary_key=True),
     Column('TeamID', ForeignKey('teams.TeamID'), primary_key=True),
     Column('HomeTeam', Boolean, nullable=False),
@@ -161,8 +155,8 @@ team_box_scores = Table(
     Column('giveaways', Integer),
 )
 
-skater_box_scores = Table(
-    'skater_box_scores', meta,
+skater_boxscores = Table(
+    'skater_boxscores', meta,
     Column('GameID', ForeignKey('games.GameID'), primary_key=True),
     Column('PlayerID', ForeignKey('players.PlayerID'), primary_key=True),
     Column('homeTeam', Boolean, nullable=False),
@@ -187,8 +181,8 @@ skater_box_scores = Table(
     Column('TOI', String),
 )
 
-goalie_box_scores = Table(
-    'goalie_box_scores', meta,
+goalie_boxscores = Table(
+    'goalie_boxscores', meta,
     Column('GameID', ForeignKey('games.GameID'), primary_key=True),
     Column('PlayerID', ForeignKey('players.PlayerID'), primary_key=True),
     Column('homeTeam', Boolean, nullable=False),
@@ -205,58 +199,4 @@ goalie_box_scores = Table(
     Column('assists', Integer),
     Column('PIM', Integer),
     Column('TOI ', String),
-)
-
-skater_seasons = Table(
-    'skater_seasons', meta,
-    Column('PlayerID', ForeignKey('players.PlayerID'), primary_key=True),
-    Column('fullName', String, nullable=False),
-    Column('TeamID', Integer),
-    Column('team', String, nullable=False),
-    Column('league', String, nullable=False, primary_key=True),
-    Column('season', Integer, nullable=False, primary_key=True),
-    Column('games', Integer),
-    Column('goals', Integer),
-    Column('assists', Integer),
-    Column('points', Integer),
-    Column('shots', Integer),
-    Column('hits', Integer),
-    Column('blocks', Integer),
-    Column('PIM', Integer),
-    Column('plusMinus', Integer),
-    Column('faceOffPct', Float),
-    Column('PPG', Integer),
-    Column('PPP', Integer),
-    Column('SHG', Integer),
-    Column('SHP', Integer),
-    Column('GWG', Integer),
-    Column('OTG', Integer),
-    Column('evenTOI', String),
-    Column('PP_TOI', String),
-    Column('SH_TOI', String),
-)
-
-goalie_seasons = Table(
-    'goalie_seasons', meta,
-    Column('PlayerID', ForeignKey('players.PlayerID'), primary_key=True),
-    Column('fullName', String, nullable=False),
-    Column('TeamID', Integer),
-    Column('team', String, nullable=False),
-    Column('league', String, nullable=False, primary_key=True),
-    Column('season', Integer, nullable=False, primary_key=True),
-    Column('games', Integer),
-    Column('starts', Integer),
-    Column('wins', Integer),
-    Column('losses', Integer),
-    Column('saves', Integer),
-    Column('shots', Integer),
-    Column('shutouts', Integer),
-    Column('GAA', Integer),
-    Column('savesEven', Integer),
-    Column('shotsEven', Float),
-    Column('savesPP', Integer),
-    Column('shotsPP', Integer),
-    Column('savesSH', Integer),
-    Column('shotsSH', Integer),
-    Column('TOI', String),
 )
