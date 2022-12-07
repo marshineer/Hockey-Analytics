@@ -9,7 +9,7 @@ from nhl_api.common import save_nhl_data
 froot = str(os.path.dirname(__file__))
 
 # Load the shift data as a data frame and event data as a list
-events_df = pd.read_csv(froot + f'/../data/game_events.csv')
+events_df = pd.read_csv(froot + '/../data/game_events.csv')
 
 # Set the event type order and column priority for sorting
 sort_order = ['GIVEAWAY', 'TAKEAWAY', 'HIT', 'GOAL', 'SHOT', 'MISS', 'BLOCK',
@@ -36,4 +36,4 @@ print(f'It took {timedelta(seconds=(time() - t_start))} to renumber '
 
 # Save the updated game event data
 event_list = sorted_events.to_dict('records')
-save_nhl_data(froot + f'/../data/game_events.csv', event_list, overwrite=True)
+save_nhl_data(froot + '/../data/game_events.csv', event_list, overwrite=True)

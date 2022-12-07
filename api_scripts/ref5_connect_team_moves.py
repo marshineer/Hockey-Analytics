@@ -7,7 +7,7 @@ from nhl_api.common import save_nhl_data
 froot = str(os.path.dirname(__file__))
 
 # Load the team data
-teams = pd.read_csv(froot + f'/../data/teams.csv')
+teams = pd.read_csv(froot + '/../data/teams.csv')
 team_list = teams.to_dict('records')
 
 # Define which teams have moved
@@ -20,4 +20,4 @@ for team in team_list:
     team['oldTeamID'] = old_team_ref.get(team_id, None)
 
 # Save the updated team data
-save_nhl_data(froot + f'/../data/teams.csv', team_list, overwrite=True)
+save_nhl_data(froot + '/../data/teams.csv', team_list, overwrite=True)
