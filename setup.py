@@ -8,7 +8,7 @@ setup(name='hockey_analytics',
       description='Ice hockey analytics project.',
       # long_description=open('README.md').read(),
       url='https://github.com/marshineer/Hockey-Analytics',
-      packages=['nhl_api'],
+      packages=['nhl_api', 'nhl_database'],
       # scripts=['api_scripts/get_season_game_data.py'],
       install_requires=['requests', 'numpy', 'geopy', 'jupyterlab', 'pandas',
                         'sqlalchemy']
