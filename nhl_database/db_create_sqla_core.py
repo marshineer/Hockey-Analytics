@@ -1,4 +1,5 @@
 import os
+import json
 from sqlalchemy import create_engine, insert
 from time import time
 from datetime import timedelta
@@ -9,8 +10,10 @@ from nhl_database.db_common import generator_from_csv
 
 
 # Initiate a database connection engine
-DATABASE_URL = 'postgresql+psycopg2://marshineer:password@localhost:5432/nhl_db'
-# db_engine = create_engine(DATABASE_URL, echo=True)
+froot = str(os.path.dirname(__file__))
+with open(froot + '/db_config.json') as f:
+    config = json.load(f)
+DATABASE_URL = config['db_url']
 db_engine = create_engine(DATABASE_URL, echo=False)
 
 # Connect to the database
