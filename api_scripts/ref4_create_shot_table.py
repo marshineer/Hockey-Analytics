@@ -24,12 +24,12 @@ shot_bools = {'goal': False,
 froot = str(os.path.dirname(__file__))
 
 # Load the event data as a list
-with open(froot + f'/../data/game_events.csv', 'r') as f:
+with open(froot + '/../data/game_events.csv', 'r') as f:
     dict_reader = csv.DictReader(f)
     all_events = list(dict_reader)
 
 # Load the player data at a dictionary
-with open(froot + f'/../data/players.csv', 'r') as f:
+with open(froot + '/../data/players.csv', 'r') as f:
     dict_reader = csv.DictReader(f)
     player_dict = list(dict_reader)
 players = {player_x['PlayerID']: player_x for player_x in player_dict}
@@ -151,4 +151,4 @@ print(f'It took {timedelta(seconds=(time() - t_start))} to create a table '
       f'of {len(shot_list)} shots')
 
 # Save the new shot table
-save_nhl_data(froot + f'/../data/shots.csv', shot_list, overwrite=True)
+save_nhl_data(froot + '/../data/shots.csv', shot_list, overwrite=True)

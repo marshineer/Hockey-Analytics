@@ -1,0 +1,3 @@
+{
+  "db_url": "postgresql+psycopg2://marshineer:password@localhost:5432/postgres"
+}

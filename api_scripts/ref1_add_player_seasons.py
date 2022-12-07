@@ -14,7 +14,7 @@ from nhl_api.common import save_nhl_data
 
 # Load the player list
 froot = str(os.path.dirname(__file__))
-fpath = froot + f'/../data/players.csv'
+fpath = froot + '/../data/players.csv'
 players_df = pd.read_csv(fpath)
 player_dict = players_df.to_dict('records')
 players = {player_x['PlayerID']: player_x for player_x in player_dict}
@@ -68,8 +68,8 @@ print(f'It took {timedelta(seconds=(time() - t_start))} to '
       f'update {len(players)} players')
 
 all_players_list = [player for player in players.values()]
-save_nhl_data(froot + f'/../data/players.csv', all_players_list, overwrite=True)
-save_nhl_data(froot + f'/../data/skater_seasons.csv', skaters_season_stats,
+save_nhl_data(froot + '/../data/players.csv', all_players_list, overwrite=True)
+save_nhl_data(froot + '/../data/skater_seasons.csv', skaters_season_stats,
               overwrite=True)
-save_nhl_data(froot + f'/../data/goalie_seasons.csv', goalies_season_stats,
+save_nhl_data(froot + '/../data/goalie_seasons.csv', goalies_season_stats,
               overwrite=True)

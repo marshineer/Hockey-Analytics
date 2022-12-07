@@ -102,7 +102,7 @@ celerybeat.pid
 *.sage.py
 
 # Environments
-.env
+nhl_database/.env
 .venv
 env/
 venv/
@@ -131,6 +131,7 @@ dmypy.json
 # PyCharm
 *.idea
 
-# Project folders
+# Project files and folders
 data/
+data/base
 old_versions/
