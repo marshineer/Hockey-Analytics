@@ -12,7 +12,7 @@ from nhl_database.db_common import generator_from_csv
 
 # Initiate a database connection engine
 froot = str(os.path.dirname(__file__))
-with open(froot + '/db_config.json') as f:
+with open(froot + '/../db_config.json') as f:
     config = json.load(f)
 DATABASE_URL = config['db_url']
 db_engine = create_engine(DATABASE_URL, echo=False)
@@ -26,7 +26,8 @@ meta.create_all(db_engine)
 
 # Load the data
 froot = str(os.path.dirname(__file__))
-fpath = froot + '/../data/'
+# fpath = froot + '/../data/'
+fpath = froot + '/../data/2010-21_backup/backup_formatted/'
 
 # Set the order the table are to be populated in
 tables = [teams, players, coaches, games, shifts, game_events, shots,
@@ -39,7 +40,7 @@ for table in tables:
     file = str(table.description) + '.csv'
 
     # Read the data and convert it into a chunked iterator
-    data_iter = generator_from_csv(fpath + file, iter_chunk=100)
+    data_iter = generator_from_csv(fpath + file, iter_chunk=1000)
 
     # Insert the chunks into the database
     with db_engine.connect() as conn:
