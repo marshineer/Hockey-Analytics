@@ -1,5 +1,3 @@
-# !/home/marshineer/anaconda3/envs/hockey python3
-
 from time import time, sleep
 from datetime import timedelta
 import os
