@@ -181,30 +181,29 @@ save_nhl_data(froot + f'/../data/skater_boxscores.csv', new_skater_box,
 print(f'Took {timedelta(seconds=(time() - t_start))} to reformat skater box score'
       f' columns')
 
-# # Update skater season columns
-# print('Renaming and ordering skater season columns')
-# t_start = time()
-# skater_season_df = pd.read_csv(froot + f'/../data/skater_seasons.csv')
-# skater_season_cols = ['PlayerID', 'fullName', 'TeamID', 'team', 'league',
-#                       'season', 'games', 'goals', 'assists', 'points', 'shots',
-#                       'hits', 'blocked', 'pim', 'plusMinus', 'faceOffPct',
-#                       'powerPlayGoals', 'powerPlayPoints', 'shortHandedGoals',
-#                       'shortHandedPoints', 'gameWinningGoals', 'overTimeGoals',
-#                       'evenTimeOnIce', 'powerPlayTimeOnIce',
-#                       'shortHandedTimeOnIce']
-# skater_season_df = skater_season_df[skater_season_cols]
-# new_skater_season_cols = ['PlayerID', 'fullName', 'TeamID', 'team', 'league',
-#                           'season', 'games', 'goals', 'assists', 'points',
-#                           'shots', 'hits', 'blocks', 'PIM', 'plusMinus',
-#                           'faceOffPct', 'PPG', 'PPP', 'SHG', 'SHP', 'GWG', 'OTG',
-#                           'evenTOI', 'PP_TOI', 'SH_TOI']
-# skater_season_df.columns = new_skater_season_cols
-# skater_season_df.sort_values(['PlayerID', 'season'], inplace=True)
-# new_skater_seasons = skater_season_df.to_dict('records')
-# save_nhl_data(froot + f'/../data/skater_seasons.csv', new_skater_seasons,
-#               overwrite=True)
-# print(f'Took {timedelta(seconds=(time() - t_start))} to reformat skater season '
-#       f'columns')
+# Update skater season columns
+print('Renaming and ordering skater season columns')
+skater_season_df = pd.read_csv(froot + f'/../data/skater_seasons.csv')
+skater_season_cols = ['PlayerID', 'fullName', 'TeamID', 'team', 'league',
+                      'season', 'games', 'goals', 'assists', 'points', 'shots',
+                      'hits', 'blocked', 'pim', 'plusMinus', 'faceOffPct',
+                      'powerPlayGoals', 'powerPlayPoints', 'shortHandedGoals',
+                      'shortHandedPoints', 'gameWinningGoals', 'overTimeGoals',
+                      'evenTimeOnIce', 'powerPlayTimeOnIce',
+                      'shortHandedTimeOnIce']
+skater_season_df = skater_season_df[skater_season_cols]
+new_skater_season_cols = ['player_id', 'full_name', 'team_id', 'team', 'league',
+                          'season', 'games', 'goals', 'assists', 'points',
+                          'shots', 'hits', 'blocks', 'pim', 'plus_minus',
+                          'faceoff_pct', 'ppg', 'ppp', 'shg', 'shp', 'gwg', 'otg',
+                          'even_toi', 'pp_toi', 'sh_toi']
+skater_season_df.columns = new_skater_season_cols
+skater_season_df.sort_values(['player_id', 'season'], inplace=True)
+skater_season_df.drop_duplicates(['player_id', 'team', 'league', 'season'],
+                                 inplace=True)
+new_skater_seasons = skater_season_df.to_dict('records')
+save_nhl_data(froot + f'/../data/skater_seasons.csv', new_skater_seasons,
+              overwrite=True)
 
 # Update goalie box score columns
 print('Renaming and ordering goalie box score columns')
@@ -229,27 +228,25 @@ save_nhl_data(froot + f'/../data/goalie_boxscores.csv', new_goalie_box,
 print(f'Took {timedelta(seconds=(time() - t_start))} to reformat goalie box score'
       f' columns')
 
-# # Update goalie season columns
-# print('Renaming and ordering goalie season columns')
-# t_start = time()
-# goalie_season_df = pd.read_csv(froot + f'/../data/goalie_seasons.csv')
-# goalie_season_cols = ['PlayerID', 'fullName', 'TeamID', 'team', 'league',
-#                       'season', 'games', 'gamesStarted', 'wins', 'losses',
-#                       'saves', 'shotsAgainst', 'shutouts', 'goalAgainstAverage',
-#                       'evenSaves', 'evenShots', 'powerPlaySaves',
-#                       'powerPlayShots', 'shortHandedSaves', 'shortHandedShots',
-#                       'timeOnIce']
-# goalie_season_df = goalie_season_df[goalie_season_cols]
-# new_goalie_season_cols = ['PlayerID', 'fullName', 'TeamID', 'team', 'league',
-#                           'season', 'games', 'starts', 'wins', 'losses', 'saves',
-#                           'shots', 'shutouts', 'GAA', 'savesEven', 'shotsEven',
-#                           'savesPP', 'shotsPP', 'savesSH', 'shotsSH', 'TOI']
-# goalie_season_df.columns = new_goalie_season_cols
-# goalie_season_df.sort_values(['PlayerID', 'season'], inplace=True)
-# new_goalie_seasons = goalie_season_df.to_dict('records')
-# save_nhl_data(froot + f'/../data/goalie_seasons.csv', new_goalie_seasons,
-#               overwrite=True)
-#
-# print(f'\nIt took {timedelta(seconds=(time() - t_start))} to rename all tables')
-# print(f'Took {timedelta(seconds=(time() - t_start))} to reformat goalie season '
-#       f'columns')
+# Update goalie season columns
+print('Renaming and ordering goalie season columns')
+goalie_season_df = pd.read_csv(froot + f'/../data/goalie_seasons.csv')
+goalie_season_cols = ['PlayerID', 'fullName', 'TeamID', 'team', 'league',
+                      'season', 'games', 'gamesStarted', 'wins', 'losses',
+                      'saves', 'shotsAgainst', 'shutouts', 'goalAgainstAverage',
+                      'evenSaves', 'evenShots', 'powerPlaySaves',
+                      'powerPlayShots', 'shortHandedSaves', 'shortHandedShots',
+                      'timeOnIce']
+goalie_season_df = goalie_season_df[goalie_season_cols]
+new_goalie_season_cols = ['player_id', 'full_name', 'team_id', 'team', 'league',
+                          'season', 'games', 'starts', 'wins', 'losses', 'saves',
+                          'shots', 'shutouts', 'gaa', 'saves_even', 'shots_even',
+                          'saves_pp', 'shots_pp', 'saves_sh', 'shots_sh', 'toi']
+goalie_season_df.columns = new_goalie_season_cols
+goalie_season_df.sort_values(['player_id', 'season'], inplace=True)
+goalie_season_df.drop_duplicates(['player_id', 'team', 'league', 'season'],
+                                 inplace=True)
+new_goalie_seasons = goalie_season_df.to_dict('records')
+save_nhl_data(froot + f'/../data/goalie_seasons.csv', new_goalie_seasons,
+              overwrite=True)
+print(f'\nIt took {timedelta(seconds=(time() - t_start))} to rename all tables')
