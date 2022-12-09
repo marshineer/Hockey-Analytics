@@ -7,6 +7,7 @@ from nhl_api.common import save_nhl_data
 
 froot = str(os.path.dirname(__file__))
 shifts_df = pd.read_csv(froot + f'/../data/shifts.csv')
+shifts_df.dropna(inplace=True)
 key_list = ['GameID', 'PlayerID', 'ShiftID']
 duplicate_shifts = shifts_df[shifts_df.duplicated(key_list)]
 duplicate_inds = duplicate_shifts.index.tolist()
