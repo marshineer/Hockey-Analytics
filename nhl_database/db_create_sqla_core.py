@@ -4,7 +4,8 @@ from sqlalchemy import create_engine, insert
 from time import time
 from datetime import timedelta
 from nhl_database.db_models_core import teams, players, coaches, games, shifts, \
-    game_events, shots, team_boxscores, skater_boxscores, goalie_boxscores
+    game_events, shots, team_boxscores, skater_boxscores, goalie_boxscores, \
+    skater_seasons, goalie_seasons
 from nhl_database.db_models_core import meta
 from nhl_database.db_common import generator_from_csv
 
@@ -29,7 +30,8 @@ fpath = froot + '/../data/'
 
 # Set the order the table are to be populated in
 tables = [teams, players, coaches, games, shifts, game_events, shots,
-          team_boxscores, skater_boxscores, goalie_boxscores]
+          team_boxscores, skater_boxscores, goalie_boxscores,
+          skater_seasons, goalie_seasons]
 
 for table in tables:
     # The tables and data files must have the same names

@@ -1,0 +1,19 @@
+version: "2.12.2"
+
+services:
+  postgres:
+    container_name: nhl_postgres_test
+    hostname: nhl_postgres_test
+    image: postgres:12
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-user}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-password}
+      - POSTGRES_DB=${POSTGRES_DB:-nhl_postgres}
+    volumes:
+      - volume_test:/var/lib/postgresql/data
+    ports:
+      - "5431:5432"
+    restart: always
+
+volumes:
+  volume_test:
