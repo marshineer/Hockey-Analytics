@@ -26,8 +26,8 @@ meta.create_all(db_engine)
 
 # Load the data
 froot = str(os.path.dirname(__file__))
-# fpath = froot + '/../data/'
-fpath = froot + '/../data/2010-21_backup/backup_formatted/'
+fpath = froot + '/../data/'
+# fpath = froot + '/../data/2010-21_backup/backup_formatted/'
 
 # Set the order the table are to be populated in
 tables = [teams, players, coaches, games, shifts, game_events, shots,

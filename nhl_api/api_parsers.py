@@ -291,7 +291,8 @@ def parse_liveData(play_data, game_id, home_id):
                      'PERIOD_END', 'PERIOD_OFFICIAL', 'GAME_END', 'FIGHT', 'SUB',
                      'GAME_OFFICIAL', 'SHOOTOUT_COMPLETE', 'OFFICIAL_CHALLENGE',
                      'EARLY_INTERMISSION_START', 'EARLY_INTERMISSION_END',
-                     'EMERGENCY_GOALTENDER']
+                     'EMERGENCY_GOALTENDER', 'EARLY_INT_START', 'EARLY_INT_END',
+                     'CHALLENGE']
 
     all_events = []
     event_id = 0

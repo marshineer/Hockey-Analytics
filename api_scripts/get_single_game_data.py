@@ -12,11 +12,14 @@ season_id = '02' if season == 'R' else '03'
 game_id = f'{year}{season_id}{game_str}'
 
 # Useful games
-game_id = '2010020001'  # regular season normal
+# game_id = '2010020001'  # regular season normal
 # game_id = '2010020004'  # regular season OT
 # game_id = '2010020008'  # regular season shootout
 # game_id = '2010030114'  # playoffs 5 OT
 # game_id = '2019020114'
+# game_id = '2010020317'  # Early intermission start/end bug
+# game_id = '2015020425'  # Early intermission start/end bug
+game_id = '2010020024'  # Missing shift data
 
 game_data = get_game_data([game_id])
 t_start = time()

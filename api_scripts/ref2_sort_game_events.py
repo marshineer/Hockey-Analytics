@@ -11,6 +11,8 @@ froot = str(os.path.dirname(__file__))
 # Load the shift data as a data frame and event data as a list
 events_df = pd.read_csv(froot + '/../data/game_events.csv')
 
+# TODO: Is there missing shift data in some games? Or do I just need to drop
+#  these? How many games is it?
 # Set the event type order and column priority for sorting
 sort_order = ['GIVEAWAY', 'TAKEAWAY', 'HIT', 'GOAL', 'SHOT', 'MISS', 'BLOCK',
               'PENALTY', 'STOP', 'FACEOFF']
