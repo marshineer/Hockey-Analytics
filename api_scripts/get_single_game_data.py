@@ -19,7 +19,7 @@ game_id = f'{year}{season_id}{game_str}'
 # game_id = '2019020114'
 # game_id = '2010020317'  # Early intermission start/end bug
 # game_id = '2015020425'  # Early intermission start/end bug
-game_id = '2010020024'  # Missing shift data
+game_id = '2010020124'  # Missing shift data
 
 game_data = get_game_data([game_id])
 t_start = time()

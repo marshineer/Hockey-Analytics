@@ -25,7 +25,7 @@ events_df.eventTypeId = pd.Categorical(events_df.eventTypeId,
 t_start = time()
 sorted_events = events_df.sort_values(sort_priority)
 print(f'It took {timedelta(seconds=(time() - t_start))} to sort '
-      f'{len(events_df)} events)')
+      f'{len(events_df)} events')
 game_ids = sorted_events.GameID.unique().tolist()
 
 # Renumber the event IDs

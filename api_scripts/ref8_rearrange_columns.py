@@ -12,7 +12,8 @@ froot = str(os.path.dirname(__file__))
 
 # Update teams columns
 print('Renaming and ordering teams columns')
-t_start = time()
+t0 = time()
+t_start = t0
 teams_df = pd.read_csv(froot + f'/../data/teams.csv')
 team_cols = ['TeamID', 'abbreviation', 'teamLocation', 'teamName', 'arenaCity',
              'arenaName', 'arenaLatitude', 'arenaLlongitude', 'oldTeamID']
@@ -95,17 +96,18 @@ print('Renaming and ordering events columns')
 t_start = time()
 events_df = pd.read_csv(froot + f'/../data/game_events.csv')
 event_cols = ['GameID', 'EventID', 'eventTypeId', 'secondaryType', 'description',
-              'player1ID', 'player1Type', 'player1Home', 'player2ID',
-              'player2Type', 'period', 'periodType', 'periodTime', 'homeScore',
-              'awayScore', 'xCoord', 'yCoord', 'assist1ID', 'assist2ID',
-              'emptyNet', 'PIM', 'playersHome', 'playersAway']
+              'homeTeamId', 'awayTeamId', 'player1ID', 'player1Type',
+              'player1Home', 'player2ID', 'player2Type', 'period', 'periodType',
+              'periodTime', 'homeScore', 'awayScore', 'xCoord', 'yCoord',
+              'assist1ID', 'assist2ID', 'emptyNet', 'PIM',
+              'playersHome', 'playersAway']
 events_df = events_df[event_cols]
 new_event_cols = ['game_id', 'event_id', 'event_type_id', 'secondary_type',
-                  'description', 'player1_id', 'player1_type', 'player1_home',
-                  'player2_id', 'player2_type', 'period', 'period_type',
-                  'period_time', 'home_score', 'away_score', 'x_coord',
-                  'y_coord', 'assist1_id', 'assist2_id', 'empty_net', 'pim',
-                  'players_home', 'players_away']
+                  'description', 'home_team_id', 'away_team_id', 'player1_id',
+                  'player1_type', 'player1_home', 'player2_id', 'player2_type',
+                  'period', 'period_type', 'period_time', 'home_score',
+                  'away_score', 'x_coord', 'y_coord', 'assist1_id', 'assist2_id',
+                  'empty_net', 'pim', 'players_home', 'players_away']
 events_df.columns = new_event_cols
 events_df.sort_values(['game_id', 'event_id'], inplace=True)
 new_events = events_df.to_dict('records')
@@ -117,21 +119,21 @@ print('Renaming and ordering shot columns')
 t_start = time()
 shots_df = pd.read_csv(froot + f'/../data/shots.csv')
 shot_cols = ['GameID', 'ShotID', 'shooterID', 'shotType', 'shotResult', 'period',
-             'periodTime', 'homeScore', 'awayScore', 'xCoord', 'yCoord',
-             'netDistance', 'netAngle', 'reboundShot', 'lastEventType',
-             'timeSinceLast', 'lastXCoord', 'lastYCoord', 'deltaY',
-             'angleChange', 'playEnds', 'puckFrozen', 'goal', 'missed',
+             'periodTime', 'homeTeamId', 'awayTeamId', 'homeScore', 'awayScore',
+             'xCoord', 'yCoord', 'netDistance', 'netAngle', 'reboundShot',
+             'lastEventType', 'timeSinceLast', 'lastXCoord', 'lastYCoord',
+             'deltaY', 'angleChange', 'playEnds', 'puckFrozen', 'goal', 'missed',
              'blocked', 'emptyNet', 'shooterHome', 'shooterHand', 'offWingShot',
              'playersHome', 'playersAway']
 shots_df = shots_df[shot_cols]
 new_shot_cols = ['game_id', 'shot_id', 'shooter_id', 'shot_type', 'shot_result',
-                 'period', 'period_time', 'home_score', 'away_score', 'x_coord',
-                 'y_coord', 'net_distance', 'net_angle', 'rebound_shot',
-                 'last_event_type', 'time_since_last', 'last_x_coord',
-                 'last_y_coord', 'delta_y', 'angle_change', 'play_ends',
-                 'puck_frozen', 'goal', 'missed', 'blocked', 'empty_net',
-                 'shooter_home', 'shooter_hand', 'off_wing_shot',
-                 'players_home', 'players_away']
+                 'period', 'period_time', 'home_team_id', 'away_team_id',
+                 'home_score', 'away_score', 'x_coord', 'y_coord',
+                 'net_distance', 'net_angle', 'rebound_shot', 'last_event_type',
+                 'time_since_last', 'last_x_coord', 'last_y_coord','delta_y',
+                 'angle_change', 'play_ends', 'puck_frozen', 'goal', 'missed',
+                 'blocked', 'empty_net', 'shooter_home', 'shooter_hand',
+                 'off_wing_shot', 'players_home', 'players_away']
 shots_df.columns = new_shot_cols
 shots_df.sort_values(['game_id', 'shot_id'], inplace=True)
 new_shots = shots_df.to_dict('records')
@@ -183,6 +185,7 @@ print(f'Took {timedelta(seconds=(time() - t_start))} to reformat skater box scor
 
 # Update skater season columns
 print('Renaming and ordering skater season columns')
+t_start = time()
 skater_season_df = pd.read_csv(froot + f'/../data/skater_seasons.csv')
 skater_season_cols = ['PlayerID', 'fullName', 'TeamID', 'team', 'league',
                       'season', 'games', 'goals', 'assists', 'points', 'shots',
@@ -204,6 +207,8 @@ skater_season_df.drop_duplicates(['player_id', 'team', 'league', 'season'],
 new_skater_seasons = skater_season_df.to_dict('records')
 save_nhl_data(froot + f'/../data/skater_seasons.csv', new_skater_seasons,
               overwrite=True)
+print(f'Took {timedelta(seconds=(time() - t_start))} to reformat skater season'
+      f' columns')
 
 # Update goalie box score columns
 print('Renaming and ordering goalie box score columns')
@@ -230,6 +235,7 @@ print(f'Took {timedelta(seconds=(time() - t_start))} to reformat goalie box scor
 
 # Update goalie season columns
 print('Renaming and ordering goalie season columns')
+t_start = time()
 goalie_season_df = pd.read_csv(froot + f'/../data/goalie_seasons.csv')
 goalie_season_cols = ['PlayerID', 'fullName', 'TeamID', 'team', 'league',
                       'season', 'games', 'gamesStarted', 'wins', 'losses',
@@ -249,4 +255,7 @@ goalie_season_df.drop_duplicates(['player_id', 'team', 'league', 'season'],
 new_goalie_seasons = goalie_season_df.to_dict('records')
 save_nhl_data(froot + f'/../data/goalie_seasons.csv', new_goalie_seasons,
               overwrite=True)
-print(f'\nIt took {timedelta(seconds=(time() - t_start))} to rename all tables')
+print(f'Took {timedelta(seconds=(time() - t_start))} to reformat goalie season'
+      f' columns')
+
+print(f'\nIt took {timedelta(seconds=(time() - t0))} to rename all tables')
