@@ -27,9 +27,15 @@ for i, event_x in enumerate(all_events):
         event_x['assist2ID'] = event_x.get('assist1ID', None)
         event_x['assist1ID'] = event_x.get('player2ID', None)
 
-    n_events += 1
+    # Flip coordinates of regular season OT prior to the 2014-15 season
     event_x['xCoord'] = float(event_x['xCoord'])
     event_x['yCoord'] = float(event_x['yCoord'])
+    game_id = event_x['GameID']
+    if game_id[:4] > '2013' and game_id[4:6] == '02':
+        event_x['xCoord'] = -event_x['xCoord']
+        event_x['yCoord'] = -event_x['yCoord']
+
+    # Calculate the shot distances from the net
     if event_x['eventTypeId'] in shot_types:
         x = event_x['xCoord']
         y = event_x['yCoord']
@@ -41,10 +47,12 @@ for i, event_x in enumerate(all_events):
         this_dist = calc_coord_diff(x, y, home_end=home_end)
         sum_dist += this_dist
         n_shots += 1
-    game_id = event_x['GameID']
+
+    # Correct the coordinates for all events
+    n_events += 1
     if (game_id != last_game_id) or (i == len(all_events) - 1):
         avg_shot_dist = sum_dist / n_shots
-        if avg_shot_dist > 95:
+        if avg_shot_dist > 89:
             if i == len(all_events) - 1:
                 for event_y in all_events[i - n_events:]:
                     if event_y['eventTypeId'] in shot_types:
