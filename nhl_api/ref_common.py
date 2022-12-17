@@ -95,6 +95,7 @@ def add_players_to_events(event_list, shift_df, games_dict):
             old_game_id = new_game_id
             old_period = new_period
 
+        # Add on-ice players list to event
         for shift_table, player_list, team in \
                 zip(shift_tables, players, ['Home', 'Away']):
             # Get a mask of the players in the ice
@@ -102,6 +103,10 @@ def add_players_to_events(event_list, shift_df, games_dict):
             on_ice_players = list(compress(player_list, player_mask))
             event_key = player_key.format(team)
             event[event_key] = on_ice_players
+
+        # Add home and away team IDs
+        event['homeTeamId'] = games_dict[new_game_id]['homeTeamId']
+        event['awayTeamId'] = games_dict[new_game_id]['awayTeamId']
 
 
 def calc_coord_diff(x1, y1, x2=None, y2=None, home_end=True, y_dist=False):
