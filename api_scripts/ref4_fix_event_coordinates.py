@@ -31,7 +31,8 @@ for i, event_x in enumerate(all_events):
     event_x['xCoord'] = float(event_x['xCoord'])
     event_x['yCoord'] = float(event_x['yCoord'])
     game_id = event_x['GameID']
-    if game_id[:4] > '2013' and game_id[4:6] == '02':
+    period = int(event_x['period'])
+    if game_id[:4] < '2014' and game_id[4:6] == '02' and period > 3:
         event_x['xCoord'] = -event_x['xCoord']
         event_x['yCoord'] = -event_x['yCoord']
 
@@ -39,7 +40,6 @@ for i, event_x in enumerate(all_events):
     if event_x['eventTypeId'] in shot_types:
         x = event_x['xCoord']
         y = event_x['yCoord']
-        period = int(event_x['period'])
         home_shot = eval(event_x['player1Home'])
         if event_x['eventTypeId'] == 'BLOCK':
             home_shot = not home_shot
