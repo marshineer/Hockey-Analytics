@@ -3,12 +3,12 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ## Project Outline
-'''mermaid
+```mermaid
     graph BT;
     Expected Goals --> Player Impact;
     In-game Win Probability --> Player Impact;
     Player Impact --> Team Success;
-'''
+```
 
 Add a flow chart of models and their relationships
 - Team success
