@@ -66,7 +66,7 @@ These jupyter notebooks illustrate patterns and trends in the data, to identify 
 
 #### Shot EDA
 TODO: Add description of the analysis
-![](https://github.com/marshineer/Hockey-Analytics/blob/main/readme_images/shot_eda_distributions.png?raw=true "Net Distance and Angle Distributions")
+![](https://github.com/marshineer/Hockey-Analytics/blob/main/readme_imgs/shot_eda_distributions.png?raw=true "Net Distance and Angle Distributions")
 
 
 ### Modelling
