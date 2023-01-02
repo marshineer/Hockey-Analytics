@@ -25,6 +25,7 @@ Furthermore, compounding effects strongly impact team performance. For example, 
 ### Setting up the environment
 
 The repo includes a setup.py file that allows the project to be installed locally as a package. Alternatively, there is an environment file that may be used to create a conda environment in which the project may be run.
+
 TODO: include code snippets describing what commands to run to perform either of the above operations
 
 
@@ -85,7 +86,6 @@ Note: Models have round ends, input features are in rectangles
 ```
 
 #### Model Descriptions
-Add descriptions of each model (including inputs/outputs, model use, and thought process/notes)
 
 In-Game Win Probability: Evaluates the probability a team will win a particular game given the current game state (score, time, etc...). The first version of the model is simply based on historical outcomes. Later, team strengths will be included as inputs to improve performance. Used to determine whether individual players normally impact the game during important moments, or collect points when the outcome of the game is no longer in question.
 
