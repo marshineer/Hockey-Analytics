@@ -4,10 +4,10 @@
 
 ## Project Outline
 ```mermaid
-    graph BT;
-    Expected Goals --> Player Impact;
-    In-game Win Probability --> Player Impact;
-    Player Impact --> Team Success;
+    flowchart BT;
+    A[Expected Goals] --> B[Player Impact];
+    C[In-game Win Probability] --> B;
+    B --> D[Team Success];
 ```
 
 Add a flow chart of models and their relationships
