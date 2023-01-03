@@ -7,12 +7,13 @@
 The goal of this project is to apply data-based analysis to an unsolved and difficult problem, which I am intimately familiar with: evaluating ice hockey. Due to the reasons described below, I believe hockey analytics models require more feature engineering and domain knowledge than data analysis in many other sports. As someone who has played hockey my entire life, and paid attention to the team development aspects of the NHL, I feel I have acquired domain knowledge that I am excited to apply to this problem. Through this project, I hope to learn lessons about data visualization, analysis methods and techniques along the way, as well as revealing some interesting, and possibly unexpected, insights about the game I love.
 
 Hockey is unique among popular professional sports due to a combination of several factors:
-- The degree of flow (there are relatively few stoppages or clearly demarcated events that can be used as data points)
-- How strongly randomness can affect the outcome of games (games are decided by relatively low scores)
+- There are relatively few stoppages or clearly demarcated events that can be used as data points
+- Games are decided by relatively low scores (randomness significantly affects outcomes)
 - The domain of legal player actions is huge
     - Precise and complex manipulation of the playing object (puck)
     - Few restrictions in allowable actions
 - Continuous substitution of players during game play
+- Players are constantly moving at relatively high speeds
 
 Although these characteristics also apply to other sports, no other sport incorporates all of them. For example, both baseball and American football have continuous play of only a few seconds on average, whereas the time between whistles in hockey is normally on the order of minutes. Football (soccer) has nearly continuous play, but the rules and equipment limit the domain of possible actions players can take. I know relatively little about cricket, but I believe its format and restrictions are similar to baseball, at least regarding the characteristics listed. 
 
@@ -96,7 +97,7 @@ Note: Models have round ends, input features are in rectangles
     A([Expected Goals]) --> B([Player Impact]);
     C([In-Game Win Probability]) --> B;
     B --> D([Team Success]);
-    X[shot location] --> A;
+    X[shot data] --> A;
     Y[game state, team strengths] --> C;
     Z[player attributes, statistics] --> B;
 ```
@@ -105,7 +106,9 @@ Note: Models have round ends, input features are in rectangles
 
 In-Game Win Probability: Evaluates the probability a team will win a particular game given the current game state (score, time, etc...). The first version of the model is simply based on historical outcomes. Later, team strengths will be included as inputs to improve performance. Used to determine whether individual players normally impact the game during important moments, or contribute to scoring opportunities when the outcome of the game is no longer in question.
 
-Expected goals (xG): Evaluates the offensive contributions of a player or team by aggregating the number and effectiveness of scoring opportunities they create. Shots are approximately 15 times more common than goals (i.e. "scoring events"). Therefore, using shots to measure player or team contributions provides many more data points for training the player impact model. Expected goals are used to help determine the impact of a player on a game, both offensively (xG created) and defensively (xG allowed), or the strength/style of a team. Whether players or teams consistently outperform their expected goal totals is an indication of the individual player's or team's talent. Consistent differences between xG and actual goals also indicates that the model is not capturing all important information, and thus can be improved. However, understanding the characteristics of which teams and players consistently outperform their xG totals may lead to a better understanding of what makes an individual player or team successful. Expected goal models are commonly used throughout hockey analytics. Therefore, I can compare the effectiveness of my model against other existing models, and adopt the publicly available xG statistics, if necessary.
+Expected goals (xG): Evaluates the offensive contributions of a player or team by aggregating the number and effectiveness of scoring opportunities they create. Shots are approximately 15 times more common than goals (i.e. "scoring events"). Therefore, using all shots to measure player or team contributions provides many more data points to train the model. Expected goals are used to help determine the impact of a player on a game, both offensively (xG created) and defensively (xG allowed), or the strength/style of a team. 
+
+Whether players or teams consistently outperform their expected goal totals is an indication of the individual player's or team's talent. Consistent differences between xG and actual goals also indicates that the model is not capturing all important information, and thus can be improved. Similarly, understanding the characteristics of which teams and players consistently outperform their xG totals may lead to a better understanding of what makes an individual player or team successful. Expected goal models are commonly used throughout hockey analytics. Therefore, I can compare the effectiveness of my model against other existing models, and adopt the publicly available xG statistics, if necessary.
 
 Player impact: Evaluates the overall impact of a player on an individual game. This takes into account the player's average scoring/defensive contributions, as well as their tendency to contribute at important times. It is an open question in the analytics community what player attributes most strongly influence team success (i.e. winning games). Therefore, the player impact model is the key cog in this pipeline, and will likely evolve the most throughout the modelling process.
 
