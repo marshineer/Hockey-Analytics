@@ -96,7 +96,7 @@ Note: Models have round ends, input features are in rectangles
     A([Expected Goals]) --> B([Player Impact]);
     C([In-Game Win Probability]) --> B;
     B --> D([Team Success]);
-    X[shot data] --> A;
+    X[shot location] --> A;
     Y[game state, team strengths] --> C;
     Z[player attributes, statistics] --> B;
 ```
