@@ -34,6 +34,7 @@ To create the conda environment from the provided `environment.yml` file, simply
 ```
 
 NOTE: The following has not yet been tested, as I am currently working on the project in editable mode (see below).
+
 To install the project as a package in your current environment, activate the environment, cd to the Hockey-Analytics directory where the setup.py file is located, and then run the following command:
 
 ```
@@ -41,6 +42,7 @@ To install the project as a package in your current environment, activate the en
 ```
 
 NOTE: This is currently how I am running the project on my computer. Installing as described above will be tested later, although to my understanding that should already work. However, in that case, the package must be reinstalled each time a change is made to the project.
+
 Alternatively, if you wish to contributue to or make changes to the project, you may install the package in development mode using the editable option, which is enabled by the [setuptools](https://setuptools.pypa.io/en/latest/userguide/development_mode.html) library.
 ```
     pip install --editable .
