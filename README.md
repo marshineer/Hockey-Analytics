@@ -12,7 +12,7 @@ Hockey is unique among popular professional sports due to a combination of sever
 - The domain of legal player actions is huge
     - Precise and complex manipulation of the playing object (puck)
     - Few restrictions in allowable actions
-- Continusous substitution of players during game play
+- Continuous substitution of players during game play
 
 Although these characteristics also apply to other sports, no other sport incorporates all of them. For example, both baseball and American football have continuous play of only a few seconds on average, whereas the time between whistles in hockey is normally on the order of minutes. Football (soccer) has nearly continuous play, but the rules and equipment limit the domain of possible actions players can take. I know relatively little about cricket, but I believe its format and restrictions are similar to baseball, at least regarding the characteristics listed. 
 
