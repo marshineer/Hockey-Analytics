@@ -63,16 +63,17 @@ print('Renaming and ordering games columns')
 t_start = time()
 games_df = pd.read_csv(froot + f'/../data/games.csv')
 game_cols = ['GameID', 'season', 'type', 'homeTeamId', 'awayTeamId',
-             'homeCoachID', 'awayCoachID', 'homeScore', 'awayScore',
+             'homeCoachID', 'awayCoachID', 'homeScore', 'awayScore', 'home_win',
              'numberPeriods', 'overtime', 'shootout', 'location', 'arena',
              'datetime', 'timeZone', 'timeZoneOffset', 'activeHomePlayers',
              'activeAwayPlayers']
 games_df = games_df[game_cols]
 new_game_cols = ['game_id', 'season', 'type', 'home_team_id', 'away_team_id',
                  'home_coach_id', 'away_coach_id', 'home_score', 'away_score',
-                 'number_periods', 'overtime', 'shootout', 'location', 'arena',
-                 'datetime', 'time_zone', 'time_zone_offset',
-                 'active_home_players', 'active_away_players']
+                 'home_win', 'number_periods', 'overtime', 'shootout',
+                 'location', 'arena', 'datetime', 'time_zone',
+                 'time_zone_offset', 'active_home_players',
+                 'active_away_players']
 games_df.columns = new_game_cols
 games_df.sort_values('game_id', inplace=True)
 new_games = games_df.to_dict('records')
