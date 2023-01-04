@@ -50,6 +50,7 @@ games = Table(
     Column('away_coach_id', ForeignKey('coaches.coach_id')),
     Column('home_score', Integer),
     Column('away_score', Integer),
+    Column('home_win', Boolean),
     Column('number_periods', Integer),
     Column('overtime', Boolean),
     Column('shootout', Boolean),
