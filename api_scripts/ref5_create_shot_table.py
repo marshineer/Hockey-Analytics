@@ -1,6 +1,5 @@
 import os
 import csv
-import pandas as pd
 from time import time
 from datetime import timedelta
 from nhl_api.ref_common import game_time_to_sec, calc_coord_diff,\
