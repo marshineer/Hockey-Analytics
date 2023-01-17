@@ -18,9 +18,10 @@ class CustomDataset(Dataset):
 
 
 # Define the model class
-class Regression_NN(nn.Module):
+class RegressionNN(nn.Module):
     def __init__(self, input_size, hidden_size, output_size):
-        super(Regression_NN, self).__init__()
+        super(RegressionNN, self).__init__()
+        self.input_dim = input_size
         self.linear_relu_stack = nn.Sequential(
             nn.Linear(input_size, hidden_size),
             nn.ReLU(),
