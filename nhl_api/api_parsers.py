@@ -127,7 +127,6 @@ def game_parser(game_dict, game_id, coaches, teams, players):
 
     # Parse the game data and update player info
     game_info = parse_gameData(game_data, teams, players, active_players)
-    game_info['shootout'] = game_dict['liveData']['linescore']['hasShootout']
     end_period = game_dict['liveData']['linescore']['currentPeriod']
     game_info['overtime'] = end_period > 3
     game_info['numberPeriods'] = end_period
@@ -137,6 +136,13 @@ def game_parser(game_dict, game_id, coaches, teams, players):
     game_info['homeScore'] = home_score
     away_score = boxscore['away']['teamStats']['teamSkaterStats']['goals']
     game_info['awayScore'] = away_score
+    game_info['shootout'] = game_dict['liveData']['linescore']['hasShootout']
+    if game_info['shootout']:
+        shootout_info = game_dict['liveData']['linescore']['shootoutInfo']
+        game_info['home_win'] = (shootout_info['home']['scores'] >
+                                 shootout_info['away']['scores'])
+    else:
+        game_info['home_win'] = home_score > away_score
 
     # Parse the game play events
     game_events = parse_liveData(play_data, game_id, game_info['homeTeamId'])
