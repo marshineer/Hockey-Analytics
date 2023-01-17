@@ -10,6 +10,7 @@ setup(name='hockey_analytics',
       url='https://github.com/marshineer/Hockey-Analytics',
       packages=['nhl_api', 'nhl_database'],
       # scripts=['api_scripts/get_season_game_data.py'],
-      install_requires=['requests', 'numpy', 'geopy', 'jupyterlab', 'pandas',
-                        'sqlalchemy']
+      install_requires=['requests', 'numpy', 'geopy', 'sqlalchemy', 'jupyterlab',
+                        'pandas', 'scikit-learn', 'torch', 'seaborn', 'scipy',
+                        'matplotlib']
       )
