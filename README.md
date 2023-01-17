@@ -79,6 +79,9 @@ Once the data is reformatted and stored as .csv files in the directory `Hockery-
 
 Where the username, password and database name postgres environment variables are retrieved from a .env file. The username and password are important for connecting to the database through a database tool such as DBeaver. Since the database is hosted locally, and there is nothing sensitive on it, I have used a generic username and password combination.
 
+The database schema is shown below. The box headings are table names, while the entries listed below are the primary keys and their datatypes.
+![](https://github.com/marshineer/Hockey-Analytics/blob/main/readme_imgs/database_erd.png?raw=true "Database ERD")
+
 
 ### Exploratory Data Analyses
 
