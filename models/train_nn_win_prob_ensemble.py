@@ -33,22 +33,24 @@ shots_df = select_table(connection, 'shots')
 shots_df = shots_df.loc[shots_df.shot_result.isin(['GOAL', 'SHOT'])]
 # print(shots_df.columns.tolist())
 
-# # Remove empty net goals
-# print('Removed:')
-# n_en_goals = len(shots_df[shots_df.empty_net == True])
-# f_en_goals = n_en_goals / len(shots_df[shots_df.shot_result == "GOAL"])
-# print(f'Number of goals on empty nets = {n_en_goals} '
-#       f'({100 * f_en_goals:4.2f}% of all goals)')
-# shots_df.drop(shots_df[shots_df.empty_net == True].index, inplace=True)
-# shots_df.reset_index(drop=True, inplace=True)
+# Remove select data from dataset
+print('Removed:')
 
-# # Remove overtime games
-# overtime_games = games_df.loc[games_df.number_periods > 3]
-# print(f'Number of overtime games = {len(overtime_games)} '
-#       f'({100 * len(overtime_games) / len(games_df):4.2f}% of all games)')
-# ot_game_ids = overtime_games.game_id.tolist()
-# shots_df.drop(shots_df[shots_df.game_id.isin(ot_game_ids)].index, inplace=True)
-# shots_df.reset_index(drop=True, inplace=True)
+# Remove empty net goals
+en_goals = shots_df[shots_df.empty_net == True]
+frac_en_goals = len(en_goals) / len(shots_df[shots_df.shot_result == "GOAL"])
+print(f'Number of goals on empty nets = {len(en_goals)} '
+      f'({100 * frac_en_goals:4.2f}% of all goals)')
+shots_df.drop(en_goals.index, inplace=True)
+shots_df.reset_index(drop=True, inplace=True)
+
+# Remove overtime games
+overtime_games = games_df.loc[games_df.number_periods > 3]
+print(f'Number of overtime games = {len(overtime_games)} '
+      f'({100 * len(overtime_games) / len(games_df):4.2f}% of all games)')
+shots_df.drop(shots_df[shots_df.game_id.isin(overtime_games.game_id.tolist())].
+              index, inplace=True)
+shots_df.reset_index(drop=True, inplace=True)
 
 # # Remove overtime shots
 # print(f'Number of shots in overtime = {len(shots_df[shots_df.period > 3])} '
@@ -63,6 +65,12 @@ shots_df = shots_df.loc[shots_df.shot_result.isin(['GOAL', 'SHOT'])]
 # shots_df.drop(shots_df[shots_df.game_id.isin(shootout_games.game_id.tolist())].index, inplace=True)
 # shots_df.reset_index(drop=True, inplace=True)
 
+# Remove playoff games
+playoff_games = games_df.loc[games_df.type == 'PLA']
+print(f'Number of playoff games = {len(playoff_games)} '
+      f'({100 * len(playoff_games) / len(games_df):4.2f}% of all games)')
+shots_df.drop(shots_df[shots_df.game_id.isin(playoff_games.game_id.tolist())].index, inplace=True)
+shots_df.reset_index(drop=True, inplace=True)
 
 # Remove the test games
 # https://www.nhl.com/gamecenter/sea-vs-ari/2021/11/06/2021020172#game=2021020172,game_state=final
@@ -82,24 +90,34 @@ shots_list = shots_df.to_dict('records')
 
 # Define the input features and target variable
 data_cols = ['goal_diff', 'shot_diff', 'game_time', 'home_win']
+game_len = 20 * 3 * 60
 this_game_id = None
 home_shots = None
 away_shots = None
 home_win = None
 data_list = []
 data_list_gameid = []
-n_games = 0
-n_home_wins = 0
+# n_games = 0
+# n_home_wins = 0
 for shot in shots_list:
     game_id = shot['game_id']
     if this_game_id != game_id:
+        # game_data = games[game_id]
+        # game_shots = shots_df[shots_df.game_id == game_id].to_dict('records')
+        # game_len = calc_game_length(game_shots, game_data)
         this_game_id = game_id
         home_shots = 1
         away_shots = 1
         home_win = 1 if games[game_id]['home_win'] else 0
-        if home_win == 1:
-            n_home_wins += 1
-        n_games += 1
+        # if home_win == 1:
+        #     n_home_wins += 1
+        # n_games += 1
+        if shot['shooter_home']:
+            home_shots = 1
+            away_shots = 0
+        else:
+            home_shots = 0
+            away_shots = 1
     else:
         if shot['shooter_home']:
             home_shots += 1
@@ -108,6 +126,7 @@ for shot in shots_list:
     period = shot['period']
     period_time = shot['period_time']
     game_time = (period - 1) * 20 * 60 + game_time_to_sec(period_time)
+    game_time = game_len - game_time
     home_score = shot['home_score']
     away_score = shot['away_score']
     data_list.append([home_score - away_score, home_shots - away_shots,
@@ -117,19 +136,20 @@ data_df = pd.DataFrame(data_list, columns=data_cols)
 
 # Define the ensemble seeds
 # print(np.random.choice(np.arange(1e4, 1e5).astype(int), size=25, replace=False))
-# ens_seeds = [99669, 41975, 77840]
 ens_seeds = [99669, 41975, 77840, 92597, 93678, 86846, 86827, 72793, 46298,
              26165, 99995, 10038, 37807, 52924, 99469, 49268, 40677, 41554,
-             74175, 58768, 55909, 29474, 65014, 40201, 81510]
+             74175, 58768, 55909, 29474, 65014, 40201, 81510, 15734, 48159,
+             38745, 45299, 36448, 12202, 38238, 21620, 82789, 38227, 41272,
+             10766, 78230, 92645, 57404, 13953, 51528, 77956, 16312, 39888,
+             14233, 94609, 18560, 37869, 42528]
 
 # Define hyperparameters
 ens_size = len(ens_seeds)
 learning_rate = 1e-4
 batch_size = 512
-n_epochs = 50
+n_epochs = 100
 loss_fn = nn.BCEWithLogitsLoss()
 
-# TODO: the ensembles should have different training-test splits (take ens avg)
 ens_models = []
 train_loss_avg = np.zeros((ens_size, n_epochs))
 train_loss_std = np.zeros((ens_size, n_epochs))
@@ -152,14 +172,7 @@ for i, seed in enumerate(ens_seeds):
 
     # Define the training and test data loaders
     train_data = CustomDataset(X_train_norm, y_train)
-    # test_data = CustomDataset(X_test_norm, y_test)
     train_dataloader = DataLoader(train_data, batch_size=batch_size)
-    # test_dataloader = DataLoader(test_data, batch_size=batch_size)
-    # for j, data in enumerate(train_dataloader):
-    #     if j == 0:
-    #         print(data)
-    #     else:
-    #         continue
 
     # Initialize a model and optimizer
     model = RegressionNN(X_train_norm.shape[-1], 32, 1).to('cpu').float()
@@ -205,16 +218,6 @@ print(f'Took {timedelta(seconds=time() - t0_start)} to train the whole ensemble'
 with open(froot + '/../data/in_game_win_prediction_ensemble.pkl', 'wb') as f:
     pickle.dump(ens_models, f)
 
-# # Plot the loss for each model
-# fig, ax = plt.subplots(1, 1, figsize=(6, 6))
-# # ax.plot(np.arange(n_epochs), train_loss_avg[ens_ind])
-# # ax.fill_between(np.arange(n_epochs), train_loss_avg[ens_ind] - train_loss_std[ens_ind],
-# #                 train_loss_avg[ens_ind] + train_loss_std[ens_ind], alpha=0.3)
-# for i in range(ens_size):
-#     ax.plot(np.arange(n_epochs), train_loss_avg[i])
-# ax.set_xlabel('Epoch', fontsize=12)
-# ax.set_ylabel('Training Loss', fontsize=12)
-
 # Plot the prediction distribution
 ens_ind = 0
 fig, ax = plt.subplots(1, 1, figsize=(6, 4))
@@ -229,33 +232,31 @@ ax.set_ylabel('Count', fontsize=12)
 
 # Calculate the win probability across game times and goal differentials
 goal_diffs = [2, 1, 0, -1]
-game_secs = 20 * 3 * 60
-model_probs = np.zeros((ens_size, len(goal_diffs), game_secs))
+model_probs = np.zeros((ens_size, len(goal_diffs), game_len))
 for i, model in enumerate(ens_models):
     scaler = model['x_scaler']
-    input_arr = np.zeros((game_secs, 3))
+    input_arr = np.zeros((game_len, 3))
     for j, g_diff in enumerate(goal_diffs):
         input_arr[:, 0] = g_diff
-        input_arr[:, -1] = np.arange(game_secs)
+        input_arr[:, -1] = np.arange(game_len)[::-1]
         scaled_input = scaler.transform(input_arr)
         pred_prob = sigmoid(model['model'](Tensor(scaled_input)))
         model_probs[i, j, :] = pred_prob.detach().numpy().squeeze()
 
-# Plot the continuous win probability for a goal differential of +2, +1, 0 and -1
+# Plot the continuous win probability for goal differentials of +2, +1, 0 and -1
 line_stys = ['--', '-', '-.', ':']
 plt_ttls = [f'Model #{ens_ind}', 'Ensemble Average']
 fig, axes = plt.subplots(2, 1, figsize=(6, 6), sharex=True)
 for i, probs in enumerate([model_probs[ens_ind], np.mean(model_probs, axis=0)]):
     for j, goal_diff in enumerate(goal_diffs):
         lbl = f'+{goal_diff}' if goal_diff > 0 else goal_diff
-        axes[i].plot(np.arange(game_secs), probs[j, :], f'k{line_stys[j]}',
+        axes[i].plot(np.arange(game_len), probs[j, :], f'k{line_stys[j]}',
                      label=f'{lbl} Home Lead')
     axes[i].set_title(plt_ttls[i], fontsize=14)
     axes[i].set_ylabel('Home Win Probability', fontsize=12)
     axes[i].legend(loc='upper left', bbox_to_anchor=(1.0, 1.03))
     axes[i].set_ylim([0, 1])
 axes[-1].set_xlabel('Game Time (seconds)', fontsize=12)
-# axes[-1].legend(loc='upper left', bbox_to_anchor=(1.0, 1.03))
 fig.tight_layout()
 fig.savefig(froot + '/../readme_imgs/home_win_prob_vs_goal_diffs.png')
 

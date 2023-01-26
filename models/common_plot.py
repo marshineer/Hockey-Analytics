@@ -148,6 +148,8 @@ def plot_in_game_probs(shots_df, home_win, team_names, x_scalers, models,
     for sec in range(game_len):
         # Set the game state (model input)
         input_list = [home_score - away_score, home_shots - away_shots, sec]
+        # input_list = [home_score - away_score, home_shots - away_shots,
+        #               game_len - sec]
         input_arr[sec, :] = input_list
 
         # If a shot occurred at this time, update the game state
