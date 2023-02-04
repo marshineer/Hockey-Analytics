@@ -1,12 +1,10 @@
 import numpy as np
-import psycopg2 as psy
 import pandas as pd
 
 
 # Modelling TODOs
 # TODO: Should the rink be divided into zones, or left as a continuous variable?
 
-# TODO: this is a modelling function
 def calc_travel_dist(city1, city2):
     """ Calculates the distance (km) between two cities.
 
@@ -45,90 +43,58 @@ def calc_travel_dist(city1, city2):
     return dist
 
 
-def create_db_connection(db, user, host, port, password=None):
-    """ Returns a database connection for executing sql commands.
+def binary_encoder(data, col_ls):
+    """ Encodes numericized categorical data as a set of binary columns.
 
-    Parameters
-        db: str = database name
-        user: str = username
-        host: str = host name (IP)
-        port: str = port number
-        password: str = password (optional)
+    Categorical data needs to be encoded such that it is usable by ML algorithms.
+    However, large numbers of categories in one-hot encoding leads to large
+    feature dimensions. Therefore, this function uses binary encoding to reduce
+    the space required to encode these features. Binary encoding avoids the issue
+    of collisions, which occurs with other methods such as hash encoding.
 
-    Returns
-        connection = database connection object
-    """
-    connection = psy.connect(database=db,
-                             user=user,
-                             password=password,
-                             host=host,
-                             port=port)
-    return connection
+    The length of the binary encoding required is calculated based on the number
+    of unique categories for each column. The encoded columns are concatenated
+    at the beginning of the data frame.
 
+    This function requires that the categorical data has already been converted
+    to be represented by a range of ints. This will be updated in later versions
+    of the function.
 
-def get_col_names(conn, table):
-    """ Retrieve the column names for a particular database table.
-
-    Parameters
-        conn: database connection object
-        table: str = sql database table name
+    Paramters
+        data: DataFrame = all data
+        col_ls: list = list of categorical column names to be encoded
 
     Returns
-        col_names: list = list of table column names
+        enc_data: DataFrame = categorical data encoded columns
+        n_enc_col: int = total number of encoded columns in output
     """
 
-    sql_query = f"""
-        SELECT *
-        FROM information_schema.columns
-        WHERE table_name = '{table}'
-        ORDER BY ordinal_position;
-        """
+    n_enc_col = 0
+    for i, col in enumerate(col_ls):
+        # Find the number of unique categories
+        n_cats = len(data[col].unique())
 
-    col_names = []
-    with conn.cursor() as cursor:
-        cursor.execute(sql_query)
-        col_data = cursor.fetchone()
+        # Determine the length of the binary encoding
+        n_dig = len(format(n_cats - 1, 'b'))
+        n_enc_col += n_dig
 
-        while col_data is not None:
-            col_names.append(col_data[3])
-            col_data = cursor.fetchone()
+        # Calculate the encoding for each category
+        bin_enc = np.zeros((len(data), n_dig), dtype=int)
+        for n in range(n_cats):
+            inds = data.loc[data[col] == n].index
+            bin_val = [int(x) for x in format(n, f'0{n_dig}b')]
+            bin_enc[inds, :] = bin_val
 
-    return col_names
+        # Assign new column names
+        col_names = []
+        for d in range(n_dig):
+            col_names.append(f'{col}{d}')
 
+        # Concatenate the encoded columns
+        if i == 0:
+            enc_data = pd.DataFrame(bin_enc, columns=col_names)
+        else:
+            enc_data = pd.concat([pd.DataFrame(bin_enc, columns=col_names),
+                                  enc_data], axis=1)
 
-def select_table(conn, table):
-    """ Retrieves an entire table from the database.
-
-    Parameters
-        conn: database connection object
-        table: str = table name
-
-    Returns
-        : data frame = table retrieved from database
-    """
-    cols = get_col_names(conn, table)
-    sql_query = f"""SELECT * FROM {table}"""
-    with conn.cursor() as cursor:
-        cursor.execute(sql_query)
-        data_list = cursor.fetchall()
-
-    return pd.DataFrame(data_list, columns=cols)
-
-
-def sql_select(conn, table, query):
-    """ Execute SQL SELECT command and returns pandas data frame.
-
-    Parameters
-        conn: database connection object
-        table: str = table name
-        query: str = SQL query command
-
-    Returns
-        : data frame = table retrieved from database
-    """
-    cols = get_col_names(conn, table)
-    with conn.cursor() as cursor:
-        cursor.execute(query)
-        data_list = cursor.fetchall()
-
-    return pd.DataFrame(data_list, columns=cols)
+    return enc_data, n_enc_col
