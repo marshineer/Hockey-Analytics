@@ -11,7 +11,7 @@ from sklearn.preprocessing import MinMaxScaler
 import torch.nn as nn
 from torch import optim, Tensor, sigmoid, manual_seed
 from torch.utils.data import DataLoader
-from common import create_db_connection, select_table
+from common_sql import create_db_connection, select_table
 from nhl_api.ref_common import game_time_to_sec
 from models.common_torch import RegressionNN, CustomDataset, train_loop
 from models.common_plot import plot_in_game_probs, plot_calibration_curves
@@ -106,8 +106,6 @@ for shot in shots_list:
         # game_shots = shots_df[shots_df.game_id == game_id].to_dict('records')
         # game_len = calc_game_length(game_shots, game_data)
         this_game_id = game_id
-        home_shots = 1
-        away_shots = 1
         home_win = 1 if games[game_id]['home_win'] else 0
         # if home_win == 1:
         #     n_home_wins += 1
