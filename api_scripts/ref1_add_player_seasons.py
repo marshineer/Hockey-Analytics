@@ -63,6 +63,7 @@ for player_x in players.values():
             continue
         else:
             player_x['rookieSeason'] = int(season_stats['season'][:4])
+            break
 
 print(f'It took {timedelta(seconds=(time() - t_start))} to '
       f'update {len(players)} players')
