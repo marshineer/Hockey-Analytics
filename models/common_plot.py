@@ -147,9 +147,9 @@ def plot_in_game_probs(shots_df, home_win, team_names, x_scalers, models,
     goal_list = []
     for sec in range(game_len):
         # Set the game state (model input)
-        input_list = [home_score - away_score, home_shots - away_shots, sec]
-        # input_list = [home_score - away_score, home_shots - away_shots,
-        #               game_len - sec]
+        # input_list = [home_score - away_score, home_shots - away_shots, sec]
+        input_list = [home_score - away_score, home_shots - away_shots,
+                      game_len - sec]
         input_arr[sec, :] = input_list
 
         # If a shot occurred at this time, update the game state
@@ -199,23 +199,29 @@ def plot_in_game_probs(shots_df, home_win, team_names, x_scalers, models,
     prev_t = -220
     prev_home = None
     for t_goal, home_goal, score in goal_list:
-        ax.vlines(t_goal, 0, 1, 'k', '--', linewidth=0.5)
+        ax.vlines(t_goal, -0.15, 1.19, 'k', '--', linewidth=0.5)
         if home_goal:
-            height = 0.95
+            height = 1.05
             if (t_goal - prev_t) < 220 and prev_home == home_goal:
-                height += 0.035
+                height += 0.05
         else:
-            height = 0.05
+            height = -0.05
             if (t_goal - prev_t) < 220 and prev_home == home_goal:
-                height -= 0.035
+                height -= 0.05
         ax.text(t_goal, height, score, fontsize=10, ha='left', va='center')
         prev_t = t_goal
         prev_home = home_goal
 
+    # Plot intermissions
+    ax.vlines(1200, -0.15, 1.19, 'r', '--', linewidth=1)
+    ax.text(1200, 1.15, '1st Int', fontsize=10, ha='left', va='center')
+    ax.vlines(2400, -0.15, 1.19, 'r', '--', linewidth=1)
+    ax.text(2400, 1.15, '2nd Int', fontsize=10, ha='left', va='center')
+
     # Set plot attributes
     ax.set_xlabel('Game Time (seconds)', fontsize=12)
     ax.set_ylabel(f'Probability of {team_names[0]} Win', fontsize=12)
-    ax.set_ylim([0, 1])
+    ax.set_ylim([-0.15, 1.19])
     w_team = team_names[0] if home_win else team_names[1]
     score1 = home_score if home_win else away_score
     score2 = away_score if home_win else home_score
