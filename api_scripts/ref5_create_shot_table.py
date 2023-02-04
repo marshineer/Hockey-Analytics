@@ -42,6 +42,7 @@ last_game_id = None
 last_shot = {}
 shot_id = 1
 shot_list = []
+switch_next = False
 t_start = time()
 print('Starting shot table generation')
 for i, event_x in enumerate(all_events):
@@ -105,12 +106,12 @@ for i, event_x in enumerate(all_events):
 
     # Calculate values dependent on the previous event
     last_type = last_event['eventTypeId']
-    shot_x['lastEventType'] = last_type
-    shot_time = game_time_to_sec(event_x['periodTime'])
     last_time = game_time_to_sec(last_event['periodTime'])
+    shot_time = game_time_to_sec(event_x['periodTime'])
+    shot_x['lastEventType'] = last_type
     delta_t = shot_time - last_time
-    # TODO: Make sure this works for end of period
-    #  (it should because period always begins w/ a face-off -> never w/ a shot)
+    if delta_t < 0:
+        delta_t = shot_time
     shot_x['timeSinceLast'] = delta_t
     if last_type in ['SHOT', 'BLOCK'] and delta_t < 3:
         shot_x['reboundShot'] = True
