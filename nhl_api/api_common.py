@@ -227,13 +227,14 @@ def update_teams(team_dict, all_teams):
     all_teams[id_key]['arenaLlongitude'] = venue_lat
 
 
-def add_player(player_dict, player_key, all_players):
+def add_player(player_dict, player_key, all_players, game_id):
     """ Adds a new player to the existing dictionary.
 
     Parameters
         player_dict: dict = basic data for the player
         player_id: str = unique player identifier
         all_players: dict = accumulated data for all players
+        game_id: int = game identifier for first game played in NHL
     """
     player_x = player_dict['person'].copy()
     player_x.pop('link', None)
@@ -244,6 +245,7 @@ def add_player(player_dict, player_key, all_players):
         player_x['position2'] = 'F'
     else:
         player_x['position2'] = player_x['position']
+    player_x['rookieSeason'] = int(str(game_id)[:4])
     all_players[player_key] = player_x
 
 
