@@ -209,7 +209,7 @@ def parse_boxscore(boxscore, game_id, coaches, teams, players):
 
                 # Add new skater if they are not already in the dict
                 if str(player_id) not in players:
-                    cm.add_player(player_dict, str(player_id), players)
+                    cm.add_player(player_dict, str(player_id), players, game_id)
 
             elif player_id in active_goalies:
                 # Goalie stats (if a players has no stats, they weren't active)
@@ -223,7 +223,7 @@ def parse_boxscore(boxscore, game_id, coaches, teams, players):
 
                 # Add new goalie if they are not already in the dict
                 if str(player_id) not in players:
-                    cm.add_player(player_dict, str(player_id), players)
+                    cm.add_player(player_dict, str(player_id), players, game_id)
 
         # Extract the coach info
         for coach_dict in team_dict['coaches']:
