@@ -4,26 +4,26 @@ from nhl_api.ref_common import game_time_to_sec
 from torch import Tensor, sigmoid
 
 
-def plot_calibration_curves(models, preds, ys, names=None, figsize=(8, 5),
+def plot_calibration_curves(preds, ys, names=None, figsize=(8, 5),
                             n_bins=10, avg_curve=True, class1='Class 1',
-                            plt_title=None):
+                            plt_ttl=None):
     """ Plots calibration curves for a probabilistic binary classifier
 
     Reference: https://scikit-learn.org/stable/modules/calibration.html
 
-    The function takes a list of models_and_analysis and their predictions and plots the
-    calibration curve. This curve indicates whether the model is predicting class
-    probabilities with a frequency proportional to the true fraction of that
-    class in the probability bin. For example, it should predict class 1 with a
-    probability of 80% correctly 80% of the time. Note: the calibration may be
-    affected by sample size, for probability bins with few predictions.
+    The function takes a list of models_and_analysis and their predictions and
+    plots the calibration curve. This curve indicates whether the model is
+    predicting class probabilities with a frequency proportional to the true
+    fraction of that class in the probability bin. For example, it should
+    predict class 1 with a probability of 80% correctly 80% of the time.
+    Note: the calibration may be affected by sample size, for probability bins
+    with few predictions.
 
     The prediction count distribution is plotted on a second axes, to allow
     visual identification of whether poor calibration corresponds to bins with
     few samples.
 
     Parameters
-        models_and_analysis: list = models_and_analysis for which to plot calibration curve
         preds: list = test data predictions for each model
         ys: list = test data ground truths
         names: list = the model names, for plotting the legend
@@ -31,7 +31,7 @@ def plot_calibration_curves(models, preds, ys, names=None, figsize=(8, 5),
         n_bins: int = the number of probability bins used for calibration
         avg_curve: bool = indicates whether to average across models_and_analysis
         class1: str = the name of class 1, for plotting
-        plt_title: str = the title of the plot (default to None)
+        plt_ttl: str = the title of the plot (default to None)
 
     Returns
         fig: matplotlib figure
@@ -41,17 +41,17 @@ def plot_calibration_curves(models, preds, ys, names=None, figsize=(8, 5),
 
     # Set generic names, if none provided
     if names is None:
-        names = [f'Model {i + 1}' for i in range(len(models))]
+        names = [f'Model {i + 1}' for i in range(len(preds))]
 
     # Initialize the plot and create the names (if none given)
     fig, ax = plt.subplots(1, 1, figsize=figsize)
     ax2 = ax.twinx()
 
-    all_cnts = np.zeros((len(models), n_bins))
+    all_cnts = np.zeros((len(preds), n_bins))
     all_mean_pred = np.zeros_like(all_cnts)
     all_true_frac = np.zeros_like(all_cnts)
     bins = np.linspace(0, 1, n_bins + 1)
-    for i, (model, y_pred, y_true) in enumerate(zip(models, preds, ys)):
+    for i, (y_pred, y_true) in enumerate(zip(preds, ys)):
         # Calculate the calibration curve data
         # counts, bins = np.histogram(y_pred, bins=n_bins)
         # print(bins)
@@ -80,7 +80,7 @@ def plot_calibration_curves(models, preds, ys, names=None, figsize=(8, 5),
             ax.plot(all_mean_pred[i, :], all_true_frac[i, :], c=f'C{i}',
                     marker='s', label=name)
             # xs = bins[:-1] + np.diff(bins)[0] / 2
-            if len(models) == 1:
+            if len(preds) == 1:
                 ax2.bar(xs, counts, color='C1', width=1 / bins.size, alpha=0.4)
             else:
                 ax2.hist(y_pred, bins=bins, color=f'C{i}', histtype='step')
@@ -92,12 +92,13 @@ def plot_calibration_curves(models, preds, ys, names=None, figsize=(8, 5),
     ax.set_xlabel(f"Mean Predicted Probability of '{class1}' in Bin",
                   fontsize=12)
     ax.set_ylabel(f"Actual Fraction of '{class1}' in Bin", fontsize=12)
-    if plt_title is not None:
-        ax.set_title(plt_title, fontsize=16)
-    if len(models) <= 5 or avg_curve:
-        ax.legend()
-    else:
-        ax.legend(loc='upper left', bbox_to_anchor=(1.0, 1.02))
+    if plt_ttl is not None:
+        ax.set_title(plt_ttl, fontsize=16)
+    ax.legend()
+    # if len(preds) <= 5 or avg_curve:
+    #     ax.legend()
+    # else:
+    #     ax.legend(loc='upper left', bbox_to_anchor=(1.0, 1.02))
     ax2.set_ylabel(f"Count of '{class1}' in Bin", fontsize=12)
 
     return fig, ax, ax2
@@ -147,9 +148,9 @@ def plot_in_game_probs(shots_df, home_win, team_names, x_scalers, models,
     goal_list = []
     for sec in range(game_len):
         # Set the game state (model input)
-        # input_list = [home_score - away_score, home_shots - away_shots, sec]
-        input_list = [home_score - away_score, home_shots - away_shots,
-                      game_len - sec]
+        input_list = [home_score - away_score, home_shots - away_shots, sec]
+        # input_list = [home_score - away_score, home_shots - away_shots,
+        #               game_len - sec]
         input_arr[sec, :] = input_list
 
         # If a shot occurred at this time, update the game state
@@ -217,6 +218,8 @@ def plot_in_game_probs(shots_df, home_win, team_names, x_scalers, models,
     ax.text(1200, 1.15, '1st Int', fontsize=10, ha='left', va='center')
     ax.vlines(2400, -0.15, 1.19, 'r', '--', linewidth=1)
     ax.text(2400, 1.15, '2nd Int', fontsize=10, ha='left', va='center')
+    ax.vlines(3600, -0.15, 1.19, 'r', '--', linewidth=1)
+    ax.text(3600, 1.15, 'End Reg', fontsize=10, ha='left', va='center')
 
     # Set plot attributes
     ax.set_xlabel('Game Time (seconds)', fontsize=12)
