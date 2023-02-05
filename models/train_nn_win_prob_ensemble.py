@@ -11,7 +11,7 @@ from sklearn.preprocessing import MinMaxScaler
 import torch.nn as nn
 from torch import optim, Tensor, sigmoid, manual_seed
 from torch.utils.data import DataLoader
-from common_sql import create_db_connection, select_table
+from models.common_sql import create_db_connection, select_table
 from nhl_api.ref_common import game_time_to_sec
 from models.common_torch import RegressionNN, CustomDataset, train_loop
 from models.common_plot import plot_in_game_probs, plot_calibration_curves
@@ -90,47 +90,53 @@ shots_list = shots_df.to_dict('records')
 
 # Define the input features and target variable
 data_cols = ['goal_diff', 'shot_diff', 'game_time', 'home_win']
-game_len = 20 * 3 * 60
-this_game_id = None
-home_shots = None
-away_shots = None
-home_win = None
-data_list = []
-data_list_gameid = []
-# n_games = 0
-# n_home_wins = 0
-for shot in shots_list:
-    game_id = shot['game_id']
-    if this_game_id != game_id:
-        # game_data = games[game_id]
-        # game_shots = shots_df[shots_df.game_id == game_id].to_dict('records')
-        # game_len = calc_game_length(game_shots, game_data)
-        this_game_id = game_id
-        home_win = 1 if games[game_id]['home_win'] else 0
-        # if home_win == 1:
-        #     n_home_wins += 1
-        # n_games += 1
-        if shot['shooter_home']:
-            home_shots = 1
-            away_shots = 0
-        else:
-            home_shots = 0
-            away_shots = 1
-    else:
-        if shot['shooter_home']:
-            home_shots += 1
-        else:
-            away_shots += 1
-    period = shot['period']
-    period_time = shot['period_time']
-    game_time = (period - 1) * 20 * 60 + game_time_to_sec(period_time)
-    game_time = game_len - game_time
-    home_score = shot['home_score']
-    away_score = shot['away_score']
-    data_list.append([home_score - away_score, home_shots - away_shots,
-                      game_time, home_win])
+game_len = 3 * 20 * 60
+game_id_list = shots_df.game_id.unique().tolist()
+n_games = len(game_id_list)
+n_samples = 300
+input_arr = np.zeros((n_samples * n_games, len(data_cols)))
+for i, game_id in enumerate(game_id_list):
+    # Set the goal and shot differential data
+    goal_diff = 0
+    shot_diff = 0
+    prev_time = 0
+    shots_list = shots_df[shots_df.game_id == game_id].to_dict('records')
 
-data_df = pd.DataFrame(data_list, columns=data_cols)
+    # Initialize the second array
+    game_sec_inputs = np.zeros((game_len, len(data_cols)))
+    # game_sec_inputs[:, 2] = np.arange(game_len)[::-1]
+    game_sec_inputs[:, -2] = np.arange(game_len)
+    game_sec_inputs[:, -1] = 1 if games[game_id]['home_win'] else 0
+    for j, shot in enumerate(shots_list):
+        # Update shot differential
+        if shot['shooter_home']:
+            shot_diff += 1
+        else:
+            shot_diff -= 1
+
+        # Update goal differential
+        goal_diff = shot['home_score'] - shot['away_score']
+
+        # Update game time
+        period = shot['period']
+        period_time = shot['period_time']
+        next_time = (period - 1) * 20 * 60 + game_time_to_sec(period_time)
+
+        # Record the data
+        if j < (len(shots_list) - 1):
+            game_sec_inputs[prev_time:next_time, 0] = goal_diff
+            game_sec_inputs[prev_time:next_time, 1] = shot_diff
+        else:
+            game_sec_inputs[prev_time:, 0] = goal_diff
+            game_sec_inputs[prev_time:, 1] = shot_diff
+        prev_time = next_time
+
+    # Subsample the game
+    sample_inds = np.random.choice(game_len, size=n_samples, replace=False)
+    game_samples = game_sec_inputs[sample_inds, :]
+    input_arr[i * n_samples:(i + 1) * n_samples, :] = game_samples
+
+data_df = pd.DataFrame(input_arr, columns=data_cols)
 
 # Define the ensemble seeds
 # print(np.random.choice(np.arange(1e4, 1e5).astype(int), size=25, replace=False))
@@ -144,8 +150,8 @@ ens_seeds = [99669, 41975, 77840, 92597, 93678, 86846, 86827, 72793, 46298,
 # Define hyperparameters
 ens_size = len(ens_seeds)
 learning_rate = 1e-4
-batch_size = 512
-n_epochs = 100
+batch_size = 2048
+n_epochs = 50
 loss_fn = nn.BCEWithLogitsLoss()
 
 ens_models = []
@@ -236,7 +242,8 @@ for i, model in enumerate(ens_models):
     input_arr = np.zeros((game_len, 3))
     for j, g_diff in enumerate(goal_diffs):
         input_arr[:, 0] = g_diff
-        input_arr[:, -1] = np.arange(game_len)[::-1]
+        # input_arr[:, -1] = np.arange(game_len)[::-1]
+        input_arr[:, -1] = np.arange(game_len)
         scaled_input = scaler.transform(input_arr)
         pred_prob = sigmoid(model['model'](Tensor(scaled_input)))
         model_probs[i, j, :] = pred_prob.detach().numpy().squeeze()
