@@ -298,6 +298,6 @@ fig.savefig(froot + f'/../readme_imgs/in_game_win_prob_{test_game_id2}.png')
 model_preds = [model['y_pred_test'] for model in ens_models]
 y_tests = [model['y_test'] for model in ens_models]
 plt_ttl = 'Ensemble Calibration Curve'
-fig, _, _ = plot_calibration_curves(ens_models, model_preds, y_tests,
-                                    class1='Home Win', plt_title=plt_ttl)
-fig.savefig(froot + f'/../readme_imgs/ensemble_calibration_curve.png')
+fig, _, _ = plot_calibration_curves(model_preds, y_tests, class1='Home Win',
+                                    plt_ttl=plt_ttl)
+fig.savefig(froot + f'/../readme_imgs/win_prediction_ensemble_calibration.png')
