@@ -72,7 +72,8 @@ def binary_encoder(data, col_ls):
     n_enc_col = 0
     for i, col in enumerate(col_ls):
         # Find the number of unique categories
-        n_cats = len(data[col].unique())
+        cats = data[col].unique()
+        n_cats = len(cats)
 
         # Determine the length of the binary encoding
         n_dig = len(format(n_cats - 1, 'b'))
@@ -80,8 +81,8 @@ def binary_encoder(data, col_ls):
 
         # Calculate the encoding for each category
         bin_enc = np.zeros((len(data), n_dig), dtype=int)
-        for n in range(n_cats):
-            inds = data.loc[data[col] == n].index
+        for n, cat in enumerate(cats):
+            inds = data.loc[data[col] == cat].index
             bin_val = [int(x) for x in format(n, f'0{n_dig}b')]
             bin_enc[inds, :] = bin_val
 
