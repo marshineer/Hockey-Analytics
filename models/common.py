@@ -98,3 +98,95 @@ def binary_encoder(data, col_ls):
                                   enc_data], axis=1)
 
     return enc_data, n_enc_col
+
+
+def sort_game_states(shots, players, return_index=False):
+    """ Sorts the events into player strength game state categories.
+
+    For each event, the number of players on each team is checked, and the game
+    state determined (5v5, 5v4, 4v5, etc...). Power plays and penalty kills are
+    considered separate game states, defined from the perspective of the player
+    associated with the event. The events are then sorted. The following game
+    state categories exist: Even_5v5, Even_4v4, Even_3v3, PP_5v4, PP_5v3, PK_Xv5.
+    Other game states (empty net, 4v3, 3v4) are ignored since they rarely occur.
+
+    Parameters
+        shots: list = all shot data
+        players: dict = all player data, keyed by player ID
+        return_index: bool = return the full dataframes or just the indices
+
+    Returns
+        even_5v5:list = even strength shots at 5-on-5
+        even_4v4:list = even strength shots at 4-on-4
+        even_3v3:list = even strength shots at 3-on-3
+        pp_5v4:list = power play shots at 5-on-4
+        pp_5v3:list = power play shots at 5-on-3
+        pk_Xv5:list = all penalty kill shots
+        other:list = all other shots
+    """
+
+    even_5v5 = []
+    even_4v4 = []
+    even_3v3 = []
+    pp_5v4 = []
+    pp_5v3 = []
+    pk_Xv5 = []
+    other = []
+    for i, shot in enumerate(shots):
+        home_players = eval(shot['players_home'])
+        n_home = len(home_players)
+        away_players = eval(shot['players_away'])
+        n_away = len(away_players)
+        home_shot = shot['shooter_home']
+
+        # Check for empty net condition
+        home_en = True
+        away_en = True
+        for player in home_players:
+            if players[player]['position'] == 'G':
+                home_en = False
+        for player in away_players:
+            if players[player]['position'] == 'G':
+                away_en = False
+        if home_en or away_en:
+            other.append(shot)
+            continue
+
+        # Check for other game states
+        if n_home == 6 and n_away == 6:
+            even_5v5.append(shot)
+        elif n_home == 5 and n_away == 5:
+            even_4v4.append(shot)
+        elif n_home == 4 and n_away == 4:
+            even_3v3.append(shot)
+        elif home_shot:
+            if n_home == 6 and n_away == 5:
+                pp_5v4.append(shot)
+            elif n_home == 6 and n_away == 4:
+                pp_5v3.append(shot)
+            elif n_home < 6 and n_away == 6:
+                pk_Xv5.append(shot)
+            else:
+                other.append(shot)
+        elif not home_shot:
+            if n_away == 6 and n_home == 5:
+                pp_5v4.append(shot)
+            elif n_away == 6 and n_home == 4:
+                pp_5v3.append(shot)
+            elif n_away < 6 and n_home == 6:
+                pk_Xv5.append(shot)
+            else:
+                other.append(shot)
+        else:
+            other.append(shot)
+
+    # Store or reset the indices
+    game_states = [even_5v5, even_4v4, even_3v3, pp_5v4, pp_5v3, pk_Xv5, other]
+    game_state_lbls = ['5v5', '4v4', '3v3', '5v4', '5v3', 'Xv5', 'other']
+    if return_index:
+        output = []
+        for state in game_states:
+            output.append(state.index)
+        return output, game_state_lbls
+    else:
+        return game_states, game_state_lbls
