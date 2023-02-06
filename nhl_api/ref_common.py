@@ -58,6 +58,8 @@ def create_shift_tables(shift_df, player_list, game_type, period):
     return shift_tables
 
 
+# TODO: update 'emptyNet' boolean for all events
+#  (maybe leave these booleans for goals only)
 def add_players_to_events(event_list, shift_df, games_dict):
     """ Gets the player IDs for all players on the ice at a given time.
 
@@ -103,6 +105,19 @@ def add_players_to_events(event_list, shift_df, games_dict):
             on_ice_players = list(compress(player_list, player_mask))
             event_key = player_key.format(team)
             event[event_key] = on_ice_players
+
+        # # Set empty net boolean
+        # home_players = event['playersHome']
+        # away_players = event['playersAway']
+        # home_en = True
+        # away_en = True
+        # for player in home_players:
+        #     if players[player]['position'] == 'G':
+        #         home_en = False
+        # for player in away_players:
+        #     if players[player]['position'] == 'G':
+        #         away_en = False
+        # event['emptyNet'] = home_en or away_en
 
         # Add home and away team IDs
         event['homeTeamId'] = games_dict[new_game_id]['homeTeamId']

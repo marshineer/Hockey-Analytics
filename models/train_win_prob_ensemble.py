@@ -2,7 +2,6 @@ import os
 import pickle
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 from time import time
 from datetime import timedelta
 from sklearn.model_selection import train_test_split
@@ -14,7 +13,6 @@ from torch.utils.data import DataLoader
 from models.common_sql import create_db_connection, select_table
 from nhl_api.ref_common import game_time_to_sec
 from models.common_torch import RegressionNN, CustomDataset, train_loop
-from models.common_plot import plot_in_game_probs, plot_calibration_curves
 
 
 # Dynamically set the CWD
@@ -31,7 +29,6 @@ games = {game_x['game_id']: game_x for game_x in games_list}
 
 shots_df = select_table(connection, 'shots')
 shots_df = shots_df.loc[shots_df.shot_result.isin(['GOAL', 'SHOT'])]
-# print(shots_df.columns.tolist())
 
 # Remove select data from dataset
 print('Removed:')
@@ -139,19 +136,31 @@ for i, game_id in enumerate(game_id_list):
 data_df = pd.DataFrame(input_arr, columns=data_cols)
 
 # Define the ensemble seeds
-# print(np.random.choice(np.arange(1e4, 1e5).astype(int), size=25, replace=False))
+# print(np.random.choice(np.arange(1e4, 1e5).astype(int), size=50, replace=False))
+# ens_seeds = [99669, 41975, 77840, 92597, 93678, 86846, 86827, 72793, 46298,
+#              26165, 99995, 10038, 37807, 52924, 99469, 49268, 40677, 41554,
+#              74175, 58768, 55909, 29474, 65014, 40201, 81510, 15734, 48159,
+#              38745, 45299, 36448, 12202, 38238, 21620, 82789, 38227, 41272,
+#              10766, 78230, 92645, 57404, 13953, 51528, 77956, 16312, 39888,
+#              14233, 94609, 18560, 37869, 42528]
 ens_seeds = [99669, 41975, 77840, 92597, 93678, 86846, 86827, 72793, 46298,
              26165, 99995, 10038, 37807, 52924, 99469, 49268, 40677, 41554,
              74175, 58768, 55909, 29474, 65014, 40201, 81510, 15734, 48159,
              38745, 45299, 36448, 12202, 38238, 21620, 82789, 38227, 41272,
              10766, 78230, 92645, 57404, 13953, 51528, 77956, 16312, 39888,
-             14233, 94609, 18560, 37869, 42528]
+             14233, 94609, 18560, 37869, 42528, 16774, 46723, 99723, 23830,
+             88686, 34055, 90634, 46324, 62138, 98342, 35659, 21804, 46297,
+             16761, 65987, 66319, 25344, 45295, 45762, 85837, 89508, 90239,
+             93787, 38709, 58878, 76755, 38157, 51337, 28136, 62995, 15447,
+             70171, 74787, 62355, 18063, 28649, 26921, 48649, 69363, 70930,
+             85529, 13452, 93889, 40757, 26967, 24095, 39206, 27959, 75098,
+             54366]
 
 # Define hyperparameters
 ens_size = len(ens_seeds)
 learning_rate = 1e-4
 batch_size = 2048
-n_epochs = 50
+n_epochs = 100
 loss_fn = nn.BCEWithLogitsLoss()
 
 ens_models = []
@@ -193,11 +202,11 @@ for i, seed in enumerate(ens_seeds):
     print(f'Took {timedelta(seconds=time() - t_start)} to train model #{i + 1}')
 
     # Test the model
-    y_pred_train = sigmoid(model(Tensor(X_train_norm))).detach().numpy().squeeze()
-    train_loss = log_loss(y_train, y_pred_train, eps=1e-7)
-    y_pred_test = sigmoid(model(Tensor(X_test_norm))).detach().numpy().squeeze()
-    test_loss = log_loss(y_test, y_pred_test, eps=1e-7)
-    pred_classes = np.round(y_pred_test, 0)
+    train_pred = sigmoid(model(Tensor(X_train_norm))).detach().numpy().squeeze()
+    train_loss = log_loss(y_train, train_pred, eps=1e-7)
+    test_pred = sigmoid(model(Tensor(X_test_norm))).detach().numpy().squeeze()
+    test_loss = log_loss(y_test, test_pred, eps=1e-7)
+    pred_classes = np.round(test_pred, 0)
     test_acc = 100 * (pred_classes == y_test).sum() / y_test.size
 
     # Save model as a dictionary
@@ -208,8 +217,8 @@ for i, seed in enumerate(ens_seeds):
                'x_scaler': x_scaler,
                'y_train': y_train,
                'y_test': y_test,
-               'y_pred_train': y_pred_train,
-               'y_pred_test': y_pred_test,
+               'y_pred_train': train_pred,
+               'y_pred_test': test_pred,
                'train_loss': train_loss,
                'test_loss': test_loss,
                'test_acc': test_acc}
@@ -221,83 +230,3 @@ print(f'Took {timedelta(seconds=time() - t0_start)} to train the whole ensemble'
 # Save the models_and_analysis
 with open(froot + '/../data/in_game_win_prediction_ensemble.pkl', 'wb') as f:
     pickle.dump(ens_models, f)
-
-# Plot the prediction distribution
-ens_ind = 0
-fig, ax = plt.subplots(1, 1, figsize=(6, 4))
-# ax.hist(ens_models[ens_ind]['y_pred_test'], bins=50)
-for i in range(ens_size):
-    # ax.hist(ens_models[i]['y_pred_test'], bins=50, histtype='step')
-    ax.hist(ens_models[i]['y_pred_test'], bins=50, alpha=0.1)
-ax.set_title('Neural Network Prediction Distribution', fontsize=16)
-ax.set_xlabel("Probability of 'Home Win'", fontsize=12)
-ax.set_ylabel('Count', fontsize=12)
-# plt.show()
-
-# Calculate the win probability across game times and goal differentials
-goal_diffs = [2, 1, 0, -1]
-model_probs = np.zeros((ens_size, len(goal_diffs), game_len))
-for i, model in enumerate(ens_models):
-    scaler = model['x_scaler']
-    input_arr = np.zeros((game_len, 3))
-    for j, g_diff in enumerate(goal_diffs):
-        input_arr[:, 0] = g_diff
-        # input_arr[:, -1] = np.arange(game_len)[::-1]
-        input_arr[:, -1] = np.arange(game_len)
-        scaled_input = scaler.transform(input_arr)
-        pred_prob = sigmoid(model['model'](Tensor(scaled_input)))
-        model_probs[i, j, :] = pred_prob.detach().numpy().squeeze()
-
-# Plot the continuous win probability for goal differentials of +2, +1, 0 and -1
-line_stys = ['--', '-', '-.', ':']
-plt_ttls = [f'Model #{ens_ind}', 'Ensemble Average']
-fig, axes = plt.subplots(2, 1, figsize=(6, 6), sharex=True)
-for i, probs in enumerate([model_probs[ens_ind], np.mean(model_probs, axis=0)]):
-    for j, goal_diff in enumerate(goal_diffs):
-        lbl = f'+{goal_diff}' if goal_diff > 0 else goal_diff
-        axes[i].plot(np.arange(game_len), probs[j, :], f'k{line_stys[j]}',
-                     label=f'{lbl} Home Lead')
-    axes[i].set_title(plt_ttls[i], fontsize=14)
-    axes[i].set_ylabel('Home Win Probability', fontsize=12)
-    axes[i].legend(loc='upper left', bbox_to_anchor=(1.0, 1.03))
-    axes[i].set_ylim([0, 1])
-axes[-1].set_xlabel('Game Time (seconds)', fontsize=12)
-fig.tight_layout()
-fig.savefig(froot + '/../readme_imgs/home_win_prob_vs_goal_diffs.png')
-
-# Plot the in-game win probability for an example game
-if test_game_id1 == 2021020172:
-    team_names1 = ['Arizona', 'Seattle']
-elif test_game_id1 == 2021020158:
-    team_names1 = ['Edmonton', 'New York']
-elif test_game_id1 == 2020020129:
-    team_names1 = ['Tampa Bay', 'Nashville']
-elif test_game_id1 == 2010020341:
-    team_names1 = ['Arizona', 'Anaheim']
-test_home_win1 = games[test_game_id1]['home_win']
-x_scalers = [model['x_scaler'] for model in ens_models]
-fig, _ = plot_in_game_probs(test_game_shots1, test_home_win1, team_names1,
-                            x_scalers, ens_models)
-fig.savefig(froot + f'/../readme_imgs/in_game_win_prob_{test_game_id1}.png')
-
-# Plot the in-game win probability for another example game
-if test_game_id2 == 2021020172:
-    team_names2 = ['Arizona', 'Seattle']
-elif test_game_id2 == 2021020158:
-    team_names2 = ['Edmonton', 'New York']
-elif test_game_id2 == 2020020129:
-    team_names2 = ['Tampa Bay', 'Nashville']
-elif test_game_id2 == 2010020341:
-    team_names2 = ['Arizona', 'Anaheim']
-test_home_win2 = games[test_game_id2]['home_win']
-fig, _ = plot_in_game_probs(test_game_shots2, test_home_win2, team_names2,
-                            x_scalers, ens_models)
-fig.savefig(froot + f'/../readme_imgs/in_game_win_prob_{test_game_id2}.png')
-
-# Plot the ensemble calibration curve
-model_preds = [model['y_pred_test'] for model in ens_models]
-y_tests = [model['y_test'] for model in ens_models]
-plt_ttl = 'Ensemble Calibration Curve'
-fig, _, _ = plot_calibration_curves(model_preds, y_tests, class1='Home Win',
-                                    plt_ttl=plt_ttl)
-fig.savefig(froot + f'/../readme_imgs/win_prediction_ensemble_calibration.png')

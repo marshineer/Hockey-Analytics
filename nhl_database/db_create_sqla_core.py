@@ -21,8 +21,12 @@ db_engine = create_engine(DATABASE_URL, echo=False)
 connection = db_engine.connect()
 
 # Create the tables ("Emit DDL to the DB")
+t0 = time()
 meta.drop_all(db_engine)
+print(f"It took {timedelta(seconds=(time() - t0))} to delete the old tables ")
+t0 = time()
 meta.create_all(db_engine)
+print(f"It took {timedelta(seconds=(time() - t0))} to create the new tables ")
 
 # Load the data
 froot = str(os.path.dirname(__file__))
