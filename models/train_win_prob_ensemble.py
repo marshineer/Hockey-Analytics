@@ -90,7 +90,7 @@ data_cols = ['goal_diff', 'shot_diff', 'game_time', 'home_win']
 game_len = 3 * 20 * 60
 game_id_list = shots_df.game_id.unique().tolist()
 n_games = len(game_id_list)
-n_samples = 300
+n_samples = 150
 input_arr = np.zeros((n_samples * n_games, len(data_cols)))
 for i, game_id in enumerate(game_id_list):
     # Set the goal and shot differential data
@@ -101,8 +101,8 @@ for i, game_id in enumerate(game_id_list):
 
     # Initialize the second array
     game_sec_inputs = np.zeros((game_len, len(data_cols)))
-    # game_sec_inputs[:, 2] = np.arange(game_len)[::-1]
-    game_sec_inputs[:, -2] = np.arange(game_len)
+    game_sec_inputs[:, 2] = np.arange(game_len)[::-1]
+    # game_sec_inputs[:, -2] = np.arange(game_len)
     game_sec_inputs[:, -1] = 1 if games[game_id]['home_win'] else 0
     for j, shot in enumerate(shots_list):
         # Update shot differential
@@ -137,30 +137,30 @@ data_df = pd.DataFrame(input_arr, columns=data_cols)
 
 # Define the ensemble seeds
 # print(np.random.choice(np.arange(1e4, 1e5).astype(int), size=50, replace=False))
-# ens_seeds = [99669, 41975, 77840, 92597, 93678, 86846, 86827, 72793, 46298,
+# ens_seeds = [99669, 41975, 77840, 92597, 30427, 86846, 54781, 72793, 46298,
 #              26165, 99995, 10038, 37807, 52924, 99469, 49268, 40677, 41554,
-#              74175, 58768, 55909, 29474, 65014, 40201, 81510, 15734, 48159,
-#              38745, 45299, 36448, 12202, 38238, 21620, 82789, 38227, 41272,
+#              74175, 52253, 22453, 29474, 65014, 40201, 81510, 15734, 48159,
+#              38745, 45299, 70848, 12202, 38238, 21620, 82789, 38227, 41272,
 #              10766, 78230, 92645, 57404, 13953, 51528, 77956, 16312, 39888,
 #              14233, 94609, 18560, 37869, 42528]
-ens_seeds = [99669, 41975, 77840, 92597, 93678, 86846, 86827, 72793, 46298,
+ens_seeds = [99669, 41975, 77840, 92597, 30427, 86846, 54781, 72793, 46298,
              26165, 99995, 10038, 37807, 52924, 99469, 49268, 40677, 41554,
-             74175, 58768, 55909, 29474, 65014, 40201, 81510, 15734, 48159,
-             38745, 45299, 36448, 12202, 38238, 21620, 82789, 38227, 41272,
+             74175, 52253, 38737, 29474, 65014, 40201, 81510, 15734, 48159,
+             38745, 45299, 70848, 12202, 38238, 21620, 82789, 38227, 41272,
              10766, 78230, 92645, 57404, 13953, 51528, 77956, 16312, 39888,
              14233, 94609, 18560, 37869, 42528, 16774, 46723, 99723, 23830,
-             88686, 34055, 90634, 46324, 62138, 98342, 35659, 21804, 46297,
-             16761, 65987, 66319, 25344, 45295, 45762, 85837, 89508, 90239,
+             88686, 34055, 90634, 46324, 62138, 98342, 85639, 21804, 46297,
+             69679, 65987, 66319, 25344, 45295, 45762, 85837, 89508, 90239,
              93787, 38709, 58878, 76755, 38157, 51337, 28136, 62995, 15447,
              70171, 74787, 62355, 18063, 28649, 26921, 48649, 69363, 70930,
-             85529, 13452, 93889, 40757, 26967, 24095, 39206, 27959, 75098,
+             24827, 13452, 93889, 51836, 26267, 24095, 39206, 27959, 75098,
              54366]
 
 # Define hyperparameters
 ens_size = len(ens_seeds)
 learning_rate = 1e-4
-batch_size = 2048
-n_epochs = 100
+batch_size = 512
+n_epochs = 25
 loss_fn = nn.BCEWithLogitsLoss()
 
 ens_models = []
@@ -228,5 +228,7 @@ for i, seed in enumerate(ens_seeds):
 print(f'Took {timedelta(seconds=time() - t0_start)} to train the whole ensemble')
 
 # Save the models_and_analysis
-with open(froot + '/../data/in_game_win_prediction_ensemble.pkl', 'wb') as f:
+# with open(froot + '/../data/in_game_win_prediction_ensemble.pkl', 'wb') as f:
+#     pickle.dump(ens_models, f)
+with open(froot + '/../data/in_game_win_prediction_ensemble_reverse.pkl', 'wb') as f:
     pickle.dump(ens_models, f)

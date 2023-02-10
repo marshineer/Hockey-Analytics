@@ -1,7 +1,6 @@
 import os
 import pickle
 import numpy as np
-import pandas as pd
 import matplotlib.pyplot as plt
 from time import time
 from datetime import timedelta
@@ -18,13 +17,13 @@ connection = create_db_connection('postgres', 'marshineer', 'localhost', '5432',
                                   'password')
 
 # Load the game and shot data
-# games_df = pd.read_csv('~/Hockey-Analytics/data/games.csv')
+print('Loading game data')
 games_df = select_table(connection, 'games')
 games_list = games_df.to_dict('records')
 games = {game_x['game_id']: game_x for game_x in games_list}
 
-shots_df = pd.read_csv('~/Hockey-Analytics/data/shots.csv')
-# shots_df = select_table(connection, 'shots')
+print('Loading shot data')
+shots_df = select_table(connection, 'shots')
 shots_df = shots_df.loc[shots_df.shot_result.isin(['GOAL', 'SHOT'])]
 # print(shots_df.columns.tolist())
 
@@ -38,14 +37,10 @@ test_game_shots1 = shots_df.loc[shots_df.game_id == test_game_id1]
 test_game_id2 = 2021020172
 test_game_shots2 = shots_df.loc[shots_df.game_id == test_game_id2]
 test_ids = [test_game_id1, test_game_id2]
-shots_df.drop(shots_df[shots_df.game_id.isin(test_ids)].index, inplace=True)
-shots_df.reset_index(drop=True, inplace=True)
-
-# Convert the shots to a list
-shots_list = shots_df.to_dict('records')
 
 # Load the models_and_analysis
 t0_start = time()
+print('Loading model ensemble')
 fpath = '/../data/in_game_win_predictors/in_game_win_prediction_ensemble.pkl'
 with open(froot + fpath, 'rb') as f:
     ens_models = pickle.load(f)
@@ -63,6 +58,7 @@ for i, model in enumerate(ens_models):
     for j, g_diff in enumerate(goal_diffs):
         input_arr[:, 0] = g_diff
         input_arr[:, -1] = np.arange(game_len)[::-1]
+        # input_arr[:, -1] = np.arange(game_len)
         scaled_input = scaler.transform(input_arr)
         pred_prob = sigmoid(model['model'](Tensor(scaled_input)))
         model_probs[i, j, :] = pred_prob.detach().numpy().squeeze()
