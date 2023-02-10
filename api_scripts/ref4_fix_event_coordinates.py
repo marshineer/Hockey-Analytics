@@ -52,6 +52,8 @@ for i, event_x in enumerate(all_events):
     n_events += 1
     if (game_id != last_game_id) or (i == len(all_events) - 1):
         avg_shot_dist = sum_dist / n_shots
+        # Assumes most shots are from within the blueline and that all
+        #  coordinates in a single game use the same frame of reference
         if avg_shot_dist > 89:
             if i == len(all_events) - 1:
                 for event_y in all_events[i - n_events:]:
