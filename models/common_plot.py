@@ -53,8 +53,6 @@ def plot_calibration_curves(preds, ys, names=None, figsize=(8, 5),
     bins = np.linspace(0, 1, n_bins + 1)
     for i, (y_pred, y_true) in enumerate(zip(preds, ys)):
         # Calculate the calibration curve data
-        # counts, bins = np.histogram(y_pred, bins=n_bins)
-        # print(bins)
         counts, _ = np.histogram(y_pred, bins=bins)
         mean_pred = np.zeros(bins.size - 1)
         true_frac = np.zeros(bins.size - 1)
@@ -122,7 +120,7 @@ def plot_in_game_probs(shots_df, home_win, team_names, x_scalers, models,
         home_win: bool = indicates whether home team wins
         team_names: list = team names ['home team', 'away team']
         x_scalers: list = scalers fit to the training data
-        models_and_analysis: list = models_and_analysis for which to plot calibration curve
+        models: list = models for which to plot calibration curve
         game_len: int = length of the game (seconds)
         names: list = the model names, for plotting the legend
         avg_prob: bool = indicates whether to average the model predictions
@@ -148,9 +146,9 @@ def plot_in_game_probs(shots_df, home_win, team_names, x_scalers, models,
     goal_list = []
     for sec in range(game_len):
         # Set the game state (model input)
-        input_list = [home_score - away_score, home_shots - away_shots, sec]
-        # input_list = [home_score - away_score, home_shots - away_shots,
-        #               game_len - sec]
+        # input_list = [home_score - away_score, home_shots - away_shots, sec]
+        input_list = [home_score - away_score, home_shots - away_shots,
+                      game_len - sec]
         input_arr[sec, :] = input_list
 
         # If a shot occurred at this time, update the game state
