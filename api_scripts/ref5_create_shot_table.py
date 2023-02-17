@@ -1,16 +1,12 @@
 import os
 import csv
+import pandas as pd
 from time import time
-from datetime import timedelta
+from datetime import timedelta, datetime
 from nhl_api.ref_common import game_time_to_sec, calc_coord_diff,\
     calc_net_angle, calc_angle_diff
 from nhl_api.common import save_nhl_data
 
-
-# TODO: Other values that should be incorporated in the shot table:
-#  p(goal), p(rebound), p(on_net), p(frozen)
-# TODO: Block rebounds should not count towards p(rebound)
-# TODO: Update empytNet bool in both events and shots? (No probably not)
 
 # Initialize shot booleans
 shot_bools = {'goal': False,
@@ -28,11 +24,17 @@ with open(froot + '/../data/game_events.csv', 'r') as f:
     dict_reader = csv.DictReader(f)
     all_events = list(dict_reader)
 
-# Load the player data at a dictionary
+# Load the player data as a dictionary
 with open(froot + '/../data/players.csv', 'r') as f:
     dict_reader = csv.DictReader(f)
-    player_dict = list(dict_reader)
-players = {player_x['PlayerID']: player_x for player_x in player_dict}
+    player_list = list(dict_reader)
+players = {int(player_x['PlayerID']): player_x for player_x in player_list}
+
+# Load the game data as a dictionary
+with open(froot + '/../data/games.csv', 'r') as f:
+    dict_reader = csv.DictReader(f)
+    game_list = list(dict_reader)
+games = {game_x['GameID']: game_x for game_x in game_list}
 
 # Extract shot events to construct a shot table
 shot_types = ['GOAL', 'SHOT', 'MISS', 'BLOCK']
@@ -55,8 +57,9 @@ for i, event_x in enumerate(all_events):
     shot_x.update(shot_bools.copy())
 
     # If it is a new game, reset the shot ID
-    if last_game_id != event_x['GameID']:
-        last_game_id = event_x['GameID']
+    game_id = event_x['GameID']
+    if last_game_id != game_id:
+        last_game_id = game_id
         shot_id = 1
     shot_x['ShotID'] = shot_id
 
@@ -82,13 +85,13 @@ for i, event_x in enumerate(all_events):
     # Add additional information
     period = int(shot_x['period'])
     home_shot = shot_x['shooterHome']
-    home_end = bool(home_shot) ^ bool(period % 2 == 1)
-    x = float(shot_x['xCoord'])
-    y = float(shot_x['yCoord'])
+    # home_end = bool(home_shot) ^ bool(period % 2 == 1)
+    home_end = home_shot ^ bool(period % 2 == 1)
+    x, y = float(shot_x['xCoord']), float(shot_x['yCoord'])
     shot_x['netDistance'] = calc_coord_diff(x, y, home_end=home_end)
     shot_x['netAngle'] = calc_net_angle(x, y, home_end=home_end)
     shooter_id = shot_x['shooterID']
-    shot_x['shooterHand'] = players[str(shooter_id)]['shootsCatches']
+    shot_x['shooterHand'] = players[shooter_id]['shootsCatches']
     y_gt_zero = y >= 0
     right_shot = shot_x['shooterHand'] == 'R'
     shot_x['offWingShot'] = home_end ^ (y_gt_zero ^ right_shot)
@@ -106,21 +109,69 @@ for i, event_x in enumerate(all_events):
 
     # Calculate values dependent on the previous event
     last_type = last_event['eventTypeId']
-    last_time = game_time_to_sec(last_event['periodTime'])
-    shot_time = game_time_to_sec(event_x['periodTime'])
     shot_x['lastEventType'] = last_type
+    last_period = int(last_event['period'])
+    last_period_time = last_event['periodTime']
+    last_time = (last_period - 1) * 20 * 60 + game_time_to_sec(last_period_time)
+    # last_time = game_time_to_sec(last_event['periodTime'])
+    period = int(event_x['period'])
+    period_time = event_x['periodTime']
+    shot_time = (period - 1) * 20 * 60 + game_time_to_sec(period_time)
+    # shot_time = game_time_to_sec(event_x['periodTime'])
+    shot_x['shotTime'] = shot_time
     delta_t = shot_time - last_time
-    if delta_t < 0:
-        delta_t = shot_time
+    # if delta_t < 0:
+    #     delta_t = shot_time
     shot_x['timeSinceLast'] = delta_t
-    if last_type in ['SHOT', 'BLOCK'] and delta_t < 3:
+    if last_type in ['SHOT', 'BLOCK'] and delta_t <= 3:
         shot_x['reboundShot'] = True
     last_x, last_y = float(last_event['xCoord']), float(last_event['yCoord'])
     shot_x['lastXCoord'] = last_x
     shot_x['lastYCoord'] = last_y
     shot_x['angleChange'] = calc_angle_diff(last_x, last_y, x, y, home_end)
-    shot_x['deltaY'] = calc_coord_diff(last_x, last_x, x, y, home_end,
+    shot_x['distChange'] = calc_coord_diff(last_x, last_y, x, y, home_end)
+    shot_x['deltaY'] = calc_coord_diff(last_x, last_y, x, y, home_end,
                                        y_dist=True)
+    shot_x['deltaX'] = calc_coord_diff(last_x, last_y, x, y, home_end,
+                                       x_dist=True)
+    shot_x['lastSameEnd'] = (last_x < -25 and x < -25) or \
+                            (last_x > 25 and x > 25)
+    # shot_x['crossIcePass'] = shot_x['lastSameEnd'] and shot_x['deltaY'] > 10
+    if last_type == 'BLOCK':
+        same_team = home_shot ^ eval(last_event['player1Home'])
+    else:
+        try:
+            same_team = not (home_shot ^ eval(last_event['player1Home']))
+        except NameError:  # Occurs if last event's player1Home is 'nan'
+            same_team = True
+    # # Check for nan
+    # # https://stackoverflow.com/questions/944700/how-can-i-check-for-nan-values
+    # elif float(last_event['player1Home']) == float(last_event['player1Home']):
+    #     same_team = not (home_shot ^ eval(last_event['player1Home']))
+    # else:
+    #     same_team = None
+    shot_x['lastTeamSame'] = same_team
+    # shot_x['lastTurnover'] = last_type in ['GIVEAWAY', 'TAKEAWAY']
+    if same_team is None:
+        shot_x['lastTurnover'] = False
+    else:
+        shot_x['lastTurnover'] = (last_type == 'TAKEAWAY' and same_team) or \
+                                 (last_type == 'GIVEAWAY' and not same_team)
+    if home_shot:
+        shot_x['teamLead'] = int(shot_x['homeScore']) - int(shot_x['awayScore'])
+    else:
+        shot_x['teamLead'] = int(shot_x['awayScore']) - int(shot_x['homeScore'])
+    game_date = str(games[game_id]['datetime'])
+    birthdate = players[shooter_id]['birthDate']
+    d1 = datetime.strptime(birthdate, '%Y-%m-%d')
+    d2 = datetime.strptime(game_date, '%Y-%m-%dT%H:%M:%SZ')
+    shot_x['shooterAge'] = (d2 - d1).total_seconds() / (60 * 60 * 24)
+    rookie_season = players[shooter_id].get('rookieSeason')
+    if shot_x.get('rookieSeason') is not None:
+        shot_x['shooterSeasons'] = int(game_date[:4]) - rookie_season
+    else:
+        shot_x['shooterSeasons'] = 0
+    shot_x['shooterPosition'] = players[shooter_id]['position2']
 
     # Check whether shot leads to a stoppage
     if i < len(all_events) - 1:

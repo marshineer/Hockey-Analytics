@@ -58,8 +58,6 @@ def create_shift_tables(shift_df, player_list, game_type, period):
     return shift_tables
 
 
-# TODO: update 'emptyNet' boolean for all events
-#  (maybe leave these booleans for goals only)
 def add_players_to_events(event_list, shift_df, games_dict):
     """ Gets the player IDs for all players on the ice at a given time.
 
@@ -124,7 +122,8 @@ def add_players_to_events(event_list, shift_df, games_dict):
         event['awayTeamId'] = games_dict[new_game_id]['awayTeamId']
 
 
-def calc_coord_diff(x1, y1, x2=None, y2=None, home_end=True, y_dist=False):
+def calc_coord_diff(x1, y1, x2=None, y2=None, home_end=True, y_dist=False,
+                    x_dist=False):
     """ Calculates the distance (ft) between two points on the ice.
 
     The y_dist boolean is used when calculating the cross-ice distance between
@@ -142,6 +141,7 @@ def calc_coord_diff(x1, y1, x2=None, y2=None, home_end=True, y_dist=False):
         y2: int = y-coordinate (ft) of the second point
         home_end: bool = True if shot taken at the "home" net
         y_dist: bool = True if only returning delta y
+        x_dist: bool = True if only returning delta x (False if y_dist is True)
 
     Returns
         : float = distance between the two points
@@ -154,6 +154,8 @@ def calc_coord_diff(x1, y1, x2=None, y2=None, home_end=True, y_dist=False):
 
     if y_dist:
         return abs(y2 - y1)
+    elif x_dist:
+        return abs(x2 - x1)
     else:
         return np.sqrt((x2 - x1)**2 + (y2 - y1)**2)
 
