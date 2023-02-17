@@ -101,7 +101,7 @@ def binary_encoder(data, col_ls):
     return enc_data, n_enc_col
 
 
-def sort_game_states(shots, players, return_index=False):
+def sort_game_states(shots, players, return_index=False, inc_other=False):
     """ Sorts the events into player strength game state categories.
 
     For each event, the number of players on each team is checked, and the game
@@ -115,6 +115,7 @@ def sort_game_states(shots, players, return_index=False):
         shots: list = all shot data
         players: dict = all player data, keyed by player ID
         return_index: bool = return the full dataframes or just the indices
+        inc_other: bool = include the 'other' category in returned data
 
     Returns
         even_5v5:list = even strength shots at 5-on-5
@@ -134,24 +135,28 @@ def sort_game_states(shots, players, return_index=False):
     pk_Xv5 = []
     other = []
     for i, shot in enumerate(shots):
-        home_players = eval(shot['players_home'])
-        n_home = len(home_players)
-        away_players = eval(shot['players_away'])
-        n_away = len(away_players)
-        home_shot = shot['shooter_home']
-
-        # Check for empty net condition
-        home_en = True
-        away_en = True
-        for player in home_players:
-            if players[player]['position'] == 'G':
-                home_en = False
-        for player in away_players:
-            if players[player]['position'] == 'G':
-                away_en = False
-        if home_en or away_en:
+        n_home, n_away, empty_net = calc_on_ice_players(shot, players)
+        if empty_net:
             other.append(shot)
             continue
+        home_shot = shot['shooter_home']
+        # home_players = eval(shot['players_home'])
+        # n_home = len(home_players)
+        # away_players = eval(shot['players_away'])
+        # n_away = len(away_players)
+        #
+        # # Check for empty net condition
+        # home_en = True
+        # away_en = True
+        # for player in home_players:
+        #     if players[player]['position'] == 'G':
+        #         home_en = False
+        # for player in away_players:
+        #     if players[player]['position'] == 'G':
+        #         away_en = False
+        # if home_en or away_en:
+        #     other.append(shot)
+        #     continue
 
         # Check for other game states
         if n_home == 6 and n_away == 6:
@@ -182,8 +187,14 @@ def sort_game_states(shots, players, return_index=False):
             other.append(shot)
 
     # Store or reset the indices
-    game_states = [even_5v5, even_4v4, even_3v3, pp_5v4, pp_5v3, pk_Xv5, other]
-    game_state_lbls = ['5v5', '4v4', '3v3', '5v4', '5v3', 'Xv5', 'other']
+    if inc_other:
+        game_states = [even_5v5, even_4v4, even_3v3, pp_5v4, pp_5v3, pk_Xv5,
+                       other]
+        game_state_lbls = ['5v5', '4v4', '3v3', '5v4', '5v3', 'Xv5', 'other']
+    else:
+        game_states = [even_5v5, even_4v4, even_3v3, pp_5v4, pp_5v3, pk_Xv5]
+        game_state_lbls = ['5v5', '4v4', '3v3', '5v4', '5v3', 'Xv5']
+
     if return_index:
         output = []
         for state in game_states:
@@ -191,3 +202,34 @@ def sort_game_states(shots, players, return_index=False):
         return output, game_state_lbls
     else:
         return game_states, game_state_lbls
+
+
+def calc_on_ice_players(shot, players):
+    """ Calculate the game state for a particular shot.
+
+    Parameters
+        shot: dict = single shot data
+        players: dict = all player data, keyed by their player ID
+
+    Returns
+        n_home: int = number of players on ice for the home team
+        n_away: int = number of players on ice for the away team
+        empty_net: bool = True if at least one net is empty
+    """
+
+    # Determine number of players for each team
+    home_players = eval(shot['players_home'])
+    n_home = len(home_players)
+    away_players = eval(shot['players_away'])
+    n_away = len(away_players)
+
+    # Check for empty net condition
+    empty_net = False
+    for player in home_players:
+        if players[player]['position'] == 'G':
+            empty_net = True
+    for player in away_players:
+        if players[player]['position'] == 'G':
+            empty_net = True
+
+    return n_home, n_away, empty_net
