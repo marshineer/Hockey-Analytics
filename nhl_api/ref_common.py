@@ -215,3 +215,34 @@ def calc_angle_diff(last_x, last_y, new_x, new_y, home_end=True):
     new_angle = calc_net_angle(new_x, new_y, home_end=home_end)
 
     return abs(new_angle - last_angle)
+
+
+def calc_d_half(home_player, period, x_coord):
+    """ Calculate whether an event occurs in the defensive half of the ice.
+
+    The player may be in either the offensive or defensive end, from the player's
+    perspective. The home team's defensive zone has positive x-coordinates in the
+    1st and 3rd periods (all odd periods in the case of OT playoff games).
+
+    Boolean table (home_player = HP, odd period = p_odd)
+    HP   p_odd  x>0  ->  D-zone
+    ___________________________
+     0     0     0    =    0
+     0     0     1    =    1
+     0     1     0    =    1
+     0     1     1    =    0
+     1     0     0    =    1
+     1     0     1    =    0
+     1     1     0    =    0
+     1     1     1    =    1
+
+    Parameters
+        home_player: bool = whether the player is on the home team
+        period: int = period in which the event occurs
+        x_coord: int = the x-coordinate of the event
+
+    Returns
+        d_zone: bool = whether the event occurs in the defensive half
+    """
+
+    return home_player ^ (x_coord > 0 ^ bool(period % 2 == 1))
