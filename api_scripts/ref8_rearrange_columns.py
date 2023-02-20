@@ -121,27 +121,28 @@ t_start = time()
 shots_df = pd.read_csv(froot + f'/../data/shots.csv')
 shot_cols = ['GameID', 'ShotID', 'shooterID', 'assist1ID', 'assist2ID',
              'shotType', 'shotResult', 'period', 'periodTime', 'shotTime',
-             'homeTeamId', 'awayTeamId', 'homeScore', 'awayScore', 'teamLead',
-             'homeShots', 'awayShots', 'xCoord', 'yCoord', 'netDistance',
-             'netAngle', 'lastEventType', 'timeSinceLast', 'lastSameEnd',
-             'lastTeamSame', 'lastXCoord', 'lastYCoord', 'deltaX', 'deltaY',
-             'distChange', 'angleChange', 'lastTurnover', 'reboundShot',
-             'playEnds', 'puckFrozen', 'goal', 'missed', 'blocked', 'emptyNet',
-             'shooterHome', 'shooterAge', 'shooterSeasons', 'shooterHand',
-             'shooterPosition', 'offWingShot', 'playersHome', 'playersAway']
+             'homeTeamId', 'awayTeamId', 'homeScore', 'awayScore',
+             'goalLeadPrior', 'homeShots', 'awayShots', 'shotLeadPrior',
+             'xCoord', 'yCoord', 'netDistance', 'netAngle', 'lastEventType',
+             'timeSinceLast', 'lastSameEnd', 'lastTeamSame', 'lastXCoord',
+             'lastYCoord', 'deltaX', 'deltaY', 'distChange', 'angleChange',
+             'lastTurnover', 'reboundShot', 'playEnds', 'puckFrozen', 'goal',
+             'missed', 'blocked', 'emptyNet', 'shooterHome', 'shooterAge',
+             'shooterSeasons', 'shooterHand', 'shooterPosition', 'offWingShot',
+             'playersHome', 'playersAway']
 shots_df = shots_df[shot_cols]
 new_shot_col = ['game_id', 'shot_id', 'shooter_id', 'assist1_id', 'assist2_id',
                 'shot_type', 'shot_result', 'period', 'period_time', 'shot_time',
                 'home_team_id', 'away_team_id', 'home_score', 'away_score',
-                'team_lead', 'home_shots', 'away_shots', 'x_coord', 'y_coord',
-                'net_distance', 'net_angle', 'last_event_type',
-                'time_since_last', 'last_same_end', 'last_same_team',
-                'last_x_coord', 'last_y_coord', 'delta_x', 'delta_y',
-                'dist_change', 'angle_change', 'last_turnover', 'rebound_shot',
-                'play_ends', 'puck_frozen', 'goal', 'missed', 'blocked',
-                'empty_net', 'shooter_home', 'shooter_age', 'shooter_seasons',
-                'shooter_hand', 'shooter_position', 'off_wing_shot',
-                'players_home', 'players_away']
+                'goal_lead_prior', 'home_shots', 'away_shots', 'shot_lead_prior',
+                'x_coord', 'y_coord', 'net_distance', 'net_angle',
+                'last_event_type', 'time_since_last', 'last_same_end',
+                'last_same_team', 'last_x_coord', 'last_y_coord', 'delta_x',
+                'delta_y', 'dist_change', 'angle_change', 'last_turnover',
+                'rebound_shot', 'play_ends', 'puck_frozen', 'goal', 'missed',
+                'blocked', 'empty_net', 'shooter_home', 'shooter_age',
+                'shooter_seasons', 'shooter_hand', 'shooter_position',
+                'off_wing_shot', 'players_home', 'players_away']
 shots_df.columns = new_shot_col
 shots_df.sort_values(['game_id', 'shot_id'], inplace=True)
 new_shots = shots_df.to_dict('records')
@@ -188,8 +189,8 @@ skater_box_df.sort_values(['game_id', 'home_team', 'player_id'], inplace=True)
 new_skater_box = skater_box_df.to_dict('records')
 save_nhl_data(froot + f'/../data/skater_boxscores.csv', new_skater_box,
               overwrite=True)
-print(f'Took {timedelta(seconds=(time() - t_start))} to reformat skater box score'
-      f' columns')
+print(f'Took {timedelta(seconds=(time() - t_start))} to reformat skater box '
+      f'score columns')
 
 # Update skater season columns
 print('Renaming and ordering skater season columns')
@@ -206,8 +207,8 @@ skater_season_df = skater_season_df[skater_season_cols]
 new_skater_season_cols = ['player_id', 'full_name', 'team_id', 'team', 'league',
                           'season', 'games', 'goals', 'assists', 'points',
                           'shots', 'hits', 'blocks', 'pim', 'plus_minus',
-                          'faceoff_pct', 'ppg', 'ppp', 'shg', 'shp', 'gwg', 'otg',
-                          'even_toi', 'pp_toi', 'sh_toi']
+                          'faceoff_pct', 'ppg', 'ppp', 'shg', 'shp', 'gwg',
+                          'otg', 'even_toi', 'pp_toi', 'sh_toi']
 skater_season_df.columns = new_skater_season_cols
 skater_season_df.sort_values(['player_id', 'season'], inplace=True)
 skater_season_df.drop_duplicates(['player_id', 'team', 'league', 'season'],
@@ -238,8 +239,8 @@ goalie_box_df.sort_values(['game_id', 'home_team', 'total_toi'],
 new_goalie_box = goalie_box_df.to_dict('records')
 save_nhl_data(froot + f'/../data/goalie_boxscores.csv', new_goalie_box,
               overwrite=True)
-print(f'Took {timedelta(seconds=(time() - t_start))} to reformat goalie box score'
-      f' columns')
+print(f'Took {timedelta(seconds=(time() - t_start))} to reformat goalie box '
+      f'score columns')
 
 # Update goalie season columns
 print('Renaming and ordering goalie season columns')

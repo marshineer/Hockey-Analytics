@@ -111,6 +111,14 @@ for i, event_x in enumerate(all_events):
     #  1   1   0  =  0
     #  1   1   1  =  1
 
+    # Add goal and shot differentials prior to current shot
+    goal_diff = int(shot_x['homeScore']) - int(shot_x['awayScore'])
+    shot_x['goalLeadPrior'] = goal_diff if home_shot else -goal_diff
+    shot_diff = home_shot_cnt - away_shot_cnt
+    shot_x['shotLeadPrior'] = shot_diff if home_shot else -shot_diff
+    if event_type == 'GOAL':
+        shot_x['goalLeadPrior'] -= 1
+
     # Add shot total information
     if event_type in ['SHOT', 'GOAL']:
         if home_shot:
@@ -164,19 +172,11 @@ for i, event_x in enumerate(all_events):
     # else:
     #     same_team = None
     shot_x['lastTeamSame'] = same_team
-    # shot_x['lastTurnover'] = last_type in ['GIVEAWAY', 'TAKEAWAY']
     if same_team is None:
         shot_x['lastTurnover'] = False
     else:
         shot_x['lastTurnover'] = (last_type == 'TAKEAWAY' and same_team) or \
                                  (last_type == 'GIVEAWAY' and not same_team)
-    if home_shot:
-        shot_x['teamLead'] = int(shot_x['homeScore']) - int(shot_x['awayScore'])
-    else:
-        shot_x['teamLead'] = int(shot_x['awayScore']) - int(shot_x['homeScore'])
-    # Team lead describes game state prior to shot, score is recorded after shot
-    if event_type == 'GOAL':
-        shot_x['teamLead'] -= 1
     game_date = str(games[game_id]['datetime'])
     birthdate = players[shooter_id]['birthDate']
     d1 = datetime.strptime(birthdate, '%Y-%m-%d')
