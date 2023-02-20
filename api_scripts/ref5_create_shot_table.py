@@ -174,6 +174,9 @@ for i, event_x in enumerate(all_events):
         shot_x['teamLead'] = int(shot_x['homeScore']) - int(shot_x['awayScore'])
     else:
         shot_x['teamLead'] = int(shot_x['awayScore']) - int(shot_x['homeScore'])
+    # Team lead describes game state prior to shot, score is recorded after shot
+    if event_type == 'GOAL':
+        shot_x['teamLead'] -= 1
     game_date = str(games[game_id]['datetime'])
     birthdate = players[shooter_id]['birthDate']
     d1 = datetime.strptime(birthdate, '%Y-%m-%d')
