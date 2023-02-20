@@ -11,7 +11,6 @@ import torch.nn as nn
 from torch import optim, Tensor, sigmoid, manual_seed
 from torch.utils.data import DataLoader
 from models.common_sql import create_db_connection, select_table
-from nhl_api.ref_common import game_time_to_sec
 from models.common_torch import RegressionNN, CustomDataset, train_loop
 
 
@@ -33,13 +32,13 @@ shots_df = shots_df.loc[shots_df.shot_result.isin(['GOAL', 'SHOT'])]
 # Remove select data from dataset
 print('Removed:')
 
-# Remove empty net goals
-en_goals = shots_df[shots_df.empty_net == True]
-frac_en_goals = len(en_goals) / len(shots_df[shots_df.shot_result == "GOAL"])
-print(f'Number of goals on empty nets = {len(en_goals)} '
-      f'({100 * frac_en_goals:4.2f}% of all goals)')
-shots_df.drop(en_goals.index, inplace=True)
-shots_df.reset_index(drop=True, inplace=True)
+# # Remove empty net goals
+# en_goals = shots_df[shots_df.empty_net == True]
+# frac_en_goals = len(en_goals) / len(shots_df[shots_df.shot_result == "GOAL"])
+# print(f'Number of goals on empty nets = {len(en_goals)} '
+#       f'({100 * frac_en_goals:4.2f}% of all goals)')
+# shots_df.drop(en_goals.index, inplace=True)
+# shots_df.reset_index(drop=True, inplace=True)
 
 # Remove overtime games
 overtime_games = games_df.loc[games_df.number_periods > 3]
@@ -66,7 +65,8 @@ shots_df.reset_index(drop=True, inplace=True)
 playoff_games = games_df.loc[games_df.type == 'PLA']
 print(f'Number of playoff games = {len(playoff_games)} '
       f'({100 * len(playoff_games) / len(games_df):4.2f}% of all games)')
-shots_df.drop(shots_df[shots_df.game_id.isin(playoff_games.game_id.tolist())].index, inplace=True)
+playoff_df = shots_df[shots_df.game_id.isin(playoff_games.game_id.tolist())]
+shots_df.drop(playoff_df.index, inplace=True)
 shots_df.reset_index(drop=True, inplace=True)
 
 # Remove the test games
@@ -82,8 +82,8 @@ test_ids = [test_game_id1, test_game_id2]
 shots_df.drop(shots_df[shots_df.game_id.isin(test_ids)].index, inplace=True)
 shots_df.reset_index(drop=True, inplace=True)
 
-# Convert the shots to a list
-shots_list = shots_df.to_dict('records')
+# Group the shots by game ID
+shots_gb = shots_df.groupby('game_id')
 
 # Define the input features and target variable
 data_cols = ['goal_diff', 'shot_diff', 'game_time', 'home_win']
@@ -97,7 +97,8 @@ for i, game_id in enumerate(game_id_list):
     goal_diff = 0
     shot_diff = 0
     prev_time = 0
-    shots_list = shots_df[shots_df.game_id == game_id].to_dict('records')
+    # shots_list = shots_df[shots_df.game_id == game_id].to_dict('records')
+    shots_list = shots_gb.get_group(int(game_id))
 
     # Initialize the second array
     game_sec_inputs = np.zeros((game_len, len(data_cols)))
@@ -105,6 +106,21 @@ for i, game_id in enumerate(game_id_list):
     # game_sec_inputs[:, -2] = np.arange(game_len)
     game_sec_inputs[:, -1] = 1 if games[game_id]['home_win'] else 0
     for j, shot in enumerate(shots_list):
+        # Update the game time
+        # period = shot['period']
+        # period_time = shot['period_time']
+        # next_time = (period - 1) * 20 * 60 + game_time_to_sec(period_time)
+
+        # Record the data between the previous and current shots
+        this_time = shot['shot_time']
+        if j < (len(shots_list) - 1):
+            game_sec_inputs[prev_time:this_time, 0] = goal_diff
+            game_sec_inputs[prev_time:this_time, 1] = shot_diff
+        else:
+            game_sec_inputs[prev_time:, 0] = goal_diff
+            game_sec_inputs[prev_time:, 1] = shot_diff
+        prev_time = this_time
+
         # Update shot differential
         if shot['shooter_home']:
             shot_diff += 1
@@ -113,20 +129,6 @@ for i, game_id in enumerate(game_id_list):
 
         # Update goal differential
         goal_diff = shot['home_score'] - shot['away_score']
-
-        # Update game time
-        period = shot['period']
-        period_time = shot['period_time']
-        next_time = (period - 1) * 20 * 60 + game_time_to_sec(period_time)
-
-        # Record the data
-        if j < (len(shots_list) - 1):
-            game_sec_inputs[prev_time:next_time, 0] = goal_diff
-            game_sec_inputs[prev_time:next_time, 1] = shot_diff
-        else:
-            game_sec_inputs[prev_time:, 0] = goal_diff
-            game_sec_inputs[prev_time:, 1] = shot_diff
-        prev_time = next_time
 
     # Subsample the game
     sample_inds = np.random.choice(game_len, size=n_samples, replace=False)
@@ -230,5 +232,6 @@ print(f'Took {timedelta(seconds=time() - t0_start)} to train the whole ensemble'
 # Save the models_and_analysis
 # with open(froot + '/../data/in_game_win_prediction_ensemble.pkl', 'wb') as f:
 #     pickle.dump(ens_models, f)
-with open(froot + '/../data/in_game_win_prediction_ensemble_reverse.pkl', 'wb') as f:
+fpath = '/../data/in_game_win_prediction_ensemble_reverse.pkl'
+with open(froot + fpath, 'wb') as f:
     pickle.dump(ens_models, f)

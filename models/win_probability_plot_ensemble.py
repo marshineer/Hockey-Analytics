@@ -27,7 +27,7 @@ shots_df = select_table(connection, 'shots')
 shots_df = shots_df.loc[shots_df.shot_result.isin(['GOAL', 'SHOT'])]
 # print(shots_df.columns.tolist())
 
-# Remove the test games
+# Extract the test games
 # https://www.nhl.com/gamecenter/sea-vs-ari/2021/11/06/2021020172#game=2021020172,game_state=final
 # https://www.nhl.com/gamecenter/nyr-vs-edm/2021/11/05/2021020158#game=2021020158,game_state=final
 # https://www.nhl.com/gamecenter/nsh-vs-tbl/2021/01/30/2020020129#game=2020020129,game_state=final
@@ -38,7 +38,7 @@ test_game_id2 = 2021020172
 test_game_shots2 = shots_df.loc[shots_df.game_id == test_game_id2]
 test_ids = [test_game_id1, test_game_id2]
 
-# Load the models_and_analysis
+# Load the model ensemble
 t0_start = time()
 print('Loading model ensemble')
 fpath = '/../data/in_game_win_predictors/in_game_win_prediction_ensemble.pkl'
