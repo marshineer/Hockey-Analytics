@@ -119,9 +119,10 @@ print(f'Took {timedelta(seconds=(time() - t_start))} to reformat event columns')
 print('Renaming and ordering shot columns')
 t_start = time()
 shots_df = pd.read_csv(froot + f'/../data/shots.csv')
-shot_cols = ['GameID', 'ShotID', 'shooterID', 'shotType', 'shotResult', 'period',
-             'periodTime', 'shotTime', 'homeTeamId', 'awayTeamId', 'homeScore',
-             'awayScore', 'teamLead', 'xCoord', 'yCoord', 'netDistance',
+shot_cols = ['GameID', 'ShotID', 'shooterID', 'assist1ID', 'assist2ID',
+             'shotType', 'shotResult', 'period', 'periodTime', 'shotTime',
+             'homeTeamId', 'awayTeamId', 'homeScore', 'awayScore', 'teamLead',
+             'homeShots', 'awayShots', 'xCoord', 'yCoord', 'netDistance',
              'netAngle', 'lastEventType', 'timeSinceLast', 'lastSameEnd',
              'lastTeamSame', 'lastXCoord', 'lastYCoord', 'deltaX', 'deltaY',
              'distChange', 'angleChange', 'lastTurnover', 'reboundShot',
@@ -129,18 +130,19 @@ shot_cols = ['GameID', 'ShotID', 'shooterID', 'shotType', 'shotResult', 'period'
              'shooterHome', 'shooterAge', 'shooterSeasons', 'shooterHand',
              'shooterPosition', 'offWingShot', 'playersHome', 'playersAway']
 shots_df = shots_df[shot_cols]
-new_shot_cols = ['game_id', 'shot_id', 'shooter_id', 'shot_type', 'shot_result',
-                 'period', 'period_time', 'shot_time', 'home_team_id',
-                 'away_team_id', 'home_score', 'away_score', 'team_lead',
-                 'x_coord', 'y_coord', 'net_distance', 'net_angle',
-                 'last_event_type', 'time_since_last', 'last_same_end',
-                 'last_same_team', 'last_x_coord', 'last_y_coord', 'delta_x',
-                 'delta_y', 'dist_change', 'angle_change', 'last_turnover',
-                 'rebound_shot', 'play_ends', 'puck_frozen', 'goal', 'missed',
-                 'blocked', 'empty_net', 'shooter_home', 'shooter_age',
-                 'shooter_seasons', 'shooter_hand', 'shooter_position',
-                 'off_wing_shot', 'players_home', 'players_away']
-shots_df.columns = new_shot_cols
+new_shot_col = ['game_id', 'shot_id', 'shooter_id', 'assist1_id', 'assist2_id',
+                'shot_type', 'shot_result', 'period', 'period_time', 'shot_time',
+                'home_team_id', 'away_team_id', 'home_score', 'away_score',
+                'team_lead', 'home_shots', 'away_shots', 'x_coord', 'y_coord',
+                'net_distance', 'net_angle', 'last_event_type',
+                'time_since_last', 'last_same_end', 'last_same_team',
+                'last_x_coord', 'last_y_coord', 'delta_x', 'delta_y',
+                'dist_change', 'angle_change', 'last_turnover', 'rebound_shot',
+                'play_ends', 'puck_frozen', 'goal', 'missed', 'blocked',
+                'empty_net', 'shooter_home', 'shooter_age', 'shooter_seasons',
+                'shooter_hand', 'shooter_position', 'off_wing_shot',
+                'players_home', 'players_away']
+shots_df.columns = new_shot_col
 shots_df.sort_values(['game_id', 'shot_id'], inplace=True)
 new_shots = shots_df.to_dict('records')
 save_nhl_data(froot + f'/../data/shots.csv', new_shots, overwrite=True)

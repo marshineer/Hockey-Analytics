@@ -43,6 +43,8 @@ last_event = None
 last_game_id = None
 last_shot = {}
 shot_id = 1
+home_shot_cnt = 0
+away_shot_cnt = 0
 shot_list = []
 switch_next = False
 t_start = time()
@@ -61,6 +63,8 @@ for i, event_x in enumerate(all_events):
     if last_game_id != game_id:
         last_game_id = game_id
         shot_id = 1
+        home_shot_cnt = 0
+        away_shot_cnt = 0
     shot_x['ShotID'] = shot_id
 
     # Rename columns and categories
@@ -106,6 +110,15 @@ for i, event_x in enumerate(all_events):
     #  1   0   1  =  0
     #  1   1   0  =  0
     #  1   1   1  =  1
+
+    # Add shot total information
+    if event_type in ['SHOT', 'GOAL']:
+        if home_shot:
+            home_shot_cnt += 1
+        else:
+            away_shot_cnt += 1
+    shot_x['homeShots'] = home_shot_cnt
+    shot_x['awayShots'] = away_shot_cnt
 
     # Calculate values dependent on the previous event
     last_type = last_event['eventTypeId']
@@ -189,8 +202,8 @@ for i, event_x in enumerate(all_events):
     shot_x.pop('player1Type', None)
     shot_x.pop('player2ID', None)
     shot_x.pop('player2Type', None)
-    shot_x.pop('assist1ID', None)
-    shot_x.pop('assist2ID', None)
+    # shot_x.pop('assist1ID', None)
+    # shot_x.pop('assist2ID', None)
     shot_x.pop('PIM', None)
 
     last_shot = shot_x.copy()
