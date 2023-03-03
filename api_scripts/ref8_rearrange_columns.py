@@ -100,15 +100,16 @@ event_cols = ['GameID', 'EventID', 'eventTypeId', 'secondaryType', 'description'
               'homeTeamId', 'awayTeamId', 'player1ID', 'player1Type',
               'player1Home', 'player2ID', 'player2Type', 'period', 'periodType',
               'periodTime', 'homeScore', 'awayScore', 'xCoord', 'yCoord',
-              'assist1ID', 'assist2ID', 'emptyNet', 'PIM',
-              'playersHome', 'playersAway']
+              'assist1ID', 'assist2ID', 'emptyNet', 'PIM', 'emptyNetHome',
+              'emptyNetAway', 'playersHome', 'playersAway']
 events_df = events_df[event_cols]
 new_event_cols = ['game_id', 'event_id', 'event_type_id', 'secondary_type',
                   'description', 'home_team_id', 'away_team_id', 'player1_id',
                   'player1_type', 'player1_home', 'player2_id', 'player2_type',
                   'period', 'period_type', 'period_time', 'home_score',
                   'away_score', 'x_coord', 'y_coord', 'assist1_id', 'assist2_id',
-                  'empty_net', 'pim', 'players_home', 'players_away']
+                  'empty_net_goal', 'pim', 'empty_net_home', 'empty_net_away',
+                  'players_home', 'players_away']
 events_df.columns = new_event_cols
 events_df.sort_values(['game_id', 'event_id'], inplace=True)
 new_events = events_df.to_dict('records')
@@ -124,11 +125,12 @@ shot_cols = ['GameID', 'ShotID', 'shooterID', 'assist1ID', 'assist2ID',
              'homeTeamId', 'awayTeamId', 'homeScore', 'awayScore',
              'goalLeadPrior', 'homeShots', 'awayShots', 'shotLeadPrior',
              'xCoord', 'yCoord', 'netDistance', 'netAngle', 'lastEventType',
-             'timeSinceLast', 'lastSameEnd', 'lastTeamSame', 'lastXCoord',
-             'lastYCoord', 'deltaX', 'deltaY', 'distChange', 'angleChange',
-             'lastTurnover', 'reboundShot', 'playEnds', 'puckFrozen', 'goal',
-             'missed', 'blocked', 'emptyNet', 'shooterHome', 'shooterAge',
-             'shooterSeasons', 'shooterHand', 'shooterPosition', 'offWingShot',
+             'lastEventPlayer', 'timeSinceLast', 'lastSameEnd', 'lastTeamSame',
+             'lastXCoord', 'lastYCoord', 'deltaX', 'deltaY', 'distChange',
+             'angleChange', 'lastTurnover', 'reboundShot', 'playEnds',
+             'puckFrozen', 'goal', 'missed', 'blocked', 'emptyNet',
+             'shooterHome', 'shooterAge', 'shooterSeasons', 'shooterHand',
+             'shooterPosition', 'offWingShot', 'emptyNetHome', 'emptyNetAway',
              'playersHome', 'playersAway']
 shots_df = shots_df[shot_cols]
 new_shot_col = ['game_id', 'shot_id', 'shooter_id', 'assist1_id', 'assist2_id',
@@ -136,13 +138,14 @@ new_shot_col = ['game_id', 'shot_id', 'shooter_id', 'assist1_id', 'assist2_id',
                 'home_team_id', 'away_team_id', 'home_score', 'away_score',
                 'goal_lead_prior', 'home_shots', 'away_shots', 'shot_lead_prior',
                 'x_coord', 'y_coord', 'net_distance', 'net_angle',
-                'last_event_type', 'time_since_last', 'last_same_end',
-                'last_same_team', 'last_x_coord', 'last_y_coord', 'delta_x',
-                'delta_y', 'dist_change', 'angle_change', 'last_turnover',
-                'rebound_shot', 'play_ends', 'puck_frozen', 'goal', 'missed',
-                'blocked', 'empty_net', 'shooter_home', 'shooter_age',
-                'shooter_seasons', 'shooter_hand', 'shooter_position',
-                'off_wing_shot', 'players_home', 'players_away']
+                'last_event_type', 'last_event_player', 'time_since_last',
+                'last_same_end', 'last_same_team', 'last_x_coord',
+                'last_y_coord', 'delta_x', 'delta_y', 'dist_change',
+                'angle_change', 'last_turnover', 'rebound_shot', 'play_ends',
+                'puck_frozen', 'goal', 'missed', 'blocked', 'empty_net_goal',
+                'shooter_home', 'shooter_age', 'shooter_seasons', 'shooter_hand',
+                'shooter_position', 'off_wing_shot', 'empty_net_home',
+                'empty_net_away', 'players_home', 'players_away']
 shots_df.columns = new_shot_col
 shots_df.sort_values(['game_id', 'shot_id'], inplace=True)
 new_shots = shots_df.to_dict('records')

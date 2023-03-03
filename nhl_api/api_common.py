@@ -388,7 +388,7 @@ def append_goalie_stats(player_stats, game_id, player_id, team, stat_list):
     stat_list.append(player_stats)
 
 
-def append_event(play, game_id, home_id, event_id, event_list):
+def append_event(play, game_id, home_id, away_id, event_id, event_list):
     """ Appends play data to a game event list.
 
     Generates a flat dictionary of data for a single game event (play),
@@ -398,6 +398,7 @@ def append_event(play, game_id, home_id, event_id, event_list):
         play: dict = all data (nested dict) for the game event
         game_id: int = unique game identifier
         home_id: int = unique team identifier of home team
+        away_id: int = unique team identifier of away team
         event_id: int = unique event identifier
         event_list: list = all previous events occurring in game
     """
@@ -407,6 +408,7 @@ def append_event(play, game_id, home_id, event_id, event_list):
     event_x.update(play['result'].copy())
     event_x.pop('event', None)
     event_x.pop('eventCode', None)
+    # TODO: Use penalty severity to identify penalty shots (add penalty shot col)
     event_x.pop('penaltySeverity', None)
     event_x.pop('penaltyMinutes', None)
     event_x.pop('strength', None)
@@ -418,6 +420,8 @@ def append_event(play, game_id, home_id, event_id, event_list):
     event_x['periodTime'] = play['about']['periodTime']
     event_x['awayScore'] = play['about']['goals']['away']
     event_x['homeScore'] = play['about']['goals']['home']
+    event_x['homeTeamId'] = home_id
+    event_x['awayeamId'] = away_id
 
     # Skip regular and pre-sesason shootout events
     if str(game_id)[4:6] in ['01', '02'] and event_x['period'] == 5:
@@ -462,8 +466,15 @@ def append_event(play, game_id, home_id, event_id, event_list):
 
     # Map types to shorter names
     type2 = play['result'].get('secondaryType')
-    if event_type in ['GOAL', 'SHOT', 'MISS']:
+    if event_type in ['GOAL', 'SHOT']:
         event_x['secondaryType'] = shot_types.get(type2, 'OTHER')
+        # TODO: include this and remove from reformatting scripts when
+        #  downloading from API again
+        # if event_type == 'GOAL':
+        #     if event_x['player1Home']:
+        #         event_x['homeScore'] -= 1
+        #     else:
+        #         event_x['awayScore'] -= 1
     elif event_type == 'PENALTY':
         event_x['secondaryType'] = penalty_names.get(type2, 'OTHER')
     else:

@@ -111,26 +111,41 @@ for i, event_x in enumerate(all_events):
     #  1   1   0  =  0
     #  1   1   1  =  1
 
-    # Add goal and shot differentials prior to current shot
-    goal_diff = int(shot_x['homeScore']) - int(shot_x['awayScore'])
-    shot_x['goalLeadPrior'] = goal_diff if home_shot else -goal_diff
+    # Add shot total and differential prior to current shot
+    shot_x['homeShots'] = home_shot_cnt
+    shot_x['awayShots'] = away_shot_cnt
     shot_diff = home_shot_cnt - away_shot_cnt
     shot_x['shotLeadPrior'] = shot_diff if home_shot else -shot_diff
-    if event_type == 'GOAL':
-        shot_x['goalLeadPrior'] -= 1
-
-    # Add shot total information
     if event_type in ['SHOT', 'GOAL']:
         if home_shot:
             home_shot_cnt += 1
         else:
             away_shot_cnt += 1
-    shot_x['homeShots'] = home_shot_cnt
-    shot_x['awayShots'] = away_shot_cnt
+
+    # Add goal differential prior to current shot
+    home_score = int(shot_x['homeScore'])
+    away_score = int(shot_x['awayScore'])
+    # TODO: remove goal update once included in api_common.append_event()
+    if event_type == 'GOAL':
+        if home_shot:
+            home_score -= 1
+            shot_x['homeScore'] = home_score
+            event_x['homeScore'] = home_score
+            # shot_x['goalLeadPrior'] = home_score - away_score
+        else:
+            away_score -= 1
+            shot_x['awayScore'] = away_score
+            event_x['awayScore'] = away_score
+            # shot_x['goalLeadPrior'] = away_score - home_score
+    goal_diff = home_score - away_score
+    shot_x['goalLeadPrior'] = goal_diff if home_shot else -goal_diff
+    # if event_type == 'GOAL':
+    #     shot_x['goalLeadPrior'] -= 1
 
     # Calculate values dependent on the previous event
     last_type = last_event['eventTypeId']
     shot_x['lastEventType'] = last_type
+    shot_x['lastEventPlayer'] = last_event.get('Player1ID', None)
     last_period = int(last_event['period'])
     last_period_time = last_event['periodTime']
     last_time = (last_period - 1) * 20 * 60 + game_time_to_sec(last_period_time)
@@ -217,5 +232,8 @@ for i, event_x in enumerate(all_events):
 print(f'It took {timedelta(seconds=(time() - t_start))} to create a table '
       f'of {len(shot_list)} shots')
 
-# Save the new shot table
+# Save the new shot table and updated event table
+t_start = time()
 save_nhl_data(froot + '/../data/shots.csv', shot_list, overwrite=True)
+save_nhl_data(froot + '/../data/game_events.csv', all_events, overwrite=True)
+print(f'It took {timedelta(seconds=(time() - t_start))} to save the files')

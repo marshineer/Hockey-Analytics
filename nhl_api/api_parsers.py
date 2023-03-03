@@ -145,7 +145,8 @@ def game_parser(game_dict, game_id, coaches, teams, players):
         game_info['home_win'] = home_score > away_score
 
     # Parse the game play events
-    game_events = parse_liveData(play_data, game_id, game_info['homeTeamId'])
+    game_events = parse_liveData(play_data, game_id, game_info['homeTeamId'],
+                                 game_info['awayTeamId'])
 
     return game_info, game_events, team_stats, skater_stats, goalie_stats
 
@@ -276,7 +277,7 @@ def parse_gameData(game_data, teams, players, active_players):
     return game_info
 
 
-def parse_liveData(play_data, game_id, home_id):
+def parse_liveData(play_data, game_id, home_id, away_id):
     """ Parses the liveData data from the NHL.com "live" endpoint.
 
     Generates a list of game event descriptions. Only game event types that are
@@ -288,6 +289,7 @@ def parse_liveData(play_data, game_id, home_id):
         play_data: dict = json of all event data for a particular game
         game_id: int = unique game identifier
         home_id: int = unique team identifier of home team
+        away_id: int = unique team identifier of away team
 
     Returns
         all_events: list = reformattd game events
@@ -308,7 +310,7 @@ def parse_liveData(play_data, game_id, home_id):
             continue
 
         # Extract event information
-        cm.append_event(play, game_id, home_id, event_id, all_events)
+        cm.append_event(play, game_id, home_id, away_id, event_id, all_events)
         event_id += 1
 
     return all_events

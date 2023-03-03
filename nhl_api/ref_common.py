@@ -1,6 +1,8 @@
 import numpy as np
 from itertools import compress
 
+import pandas as pd
+
 
 def game_time_to_sec(time_str):
     """ Converts a string of 'minutes-seconds' to seconds.
@@ -58,15 +60,17 @@ def create_shift_tables(shift_df, player_list, game_type, period):
     return shift_tables
 
 
-def add_players_to_events(event_list, shift_df, games_dict):
+def add_players_to_events(event_list, shift_gb, games_dict, players_dict):
     """ Gets the player IDs for all players on the ice at a given time.
 
     The players are identified as either being on the home or away team.
 
     Parameters
         event_list: list of dicts = event data pulled from the NHL.com API
+        shift_gb: GroupBy object = shift data pulled from the NHL.com API
         shift_df: DataFrame = shift data pulled from the NHL.com API
         games_dict: dict = all games, keyed by their unique game ID
+        players_dict: dict = all players, keyed by their unique player ID
     """
 
     player_key = 'players{}'
@@ -86,8 +90,13 @@ def add_players_to_events(event_list, shift_df, games_dict):
         if new_game_id != old_game_id or new_period != old_period:
             # Create a shift table for the period
             game_type = games_dict[new_game_id]['type']
-            game_shifts = shift_df[shift_df.GameID == new_game_id]
-            period_shifts = game_shifts[game_shifts.period == new_period]
+            # game_shifts = shift_df[shift_df.GameID == new_game_id]
+            # period_shifts = game_shifts[game_shifts.period == new_period]
+            try:
+                period_shifts = shift_gb.get_group((new_game_id, new_period))
+            except KeyError:
+                shift_cols = shift_gb.obj.columns.tolist()
+                period_shifts = pd.DataFrame(columns=shift_cols)
             players = [games_dict[new_game_id]['activeHomePlayers'],
                        games_dict[new_game_id]['activeAwayPlayers']]
             shift_tables = create_shift_tables(period_shifts, players, game_type,
@@ -104,18 +113,19 @@ def add_players_to_events(event_list, shift_df, games_dict):
             event_key = player_key.format(team)
             event[event_key] = on_ice_players
 
-        # # Set empty net boolean
-        # home_players = event['playersHome']
-        # away_players = event['playersAway']
-        # home_en = True
-        # away_en = True
-        # for player in home_players:
-        #     if players[player]['position'] == 'G':
-        #         home_en = False
-        # for player in away_players:
-        #     if players[player]['position'] == 'G':
-        #         away_en = False
-        # event['emptyNet'] = home_en or away_en
+        # Set empty net boolean
+        home_players = event['playersHome']
+        away_players = event['playersAway']
+        home_en = True
+        away_en = True
+        for player_id in home_players:
+            if players_dict[player_id]['position'] == 'G':
+                home_en = False
+        for player_id in away_players:
+            if players_dict[player_id]['position'] == 'G':
+                away_en = False
+        event['emptyNetHome'] = home_en
+        event['emptyNetAway'] = away_en
 
         # Add home and away team IDs
         event['homeTeamId'] = games_dict[new_game_id]['homeTeamId']
