@@ -4,9 +4,9 @@ from nhl_api.ref_common import game_time_to_sec
 from torch import Tensor, sigmoid
 
 
-def plot_calibration_curves(preds, ys, names=None, figsize=(8, 5),
-                            n_bins=10, avg_curve=True, class1='Class 1',
-                            plt_ttl=None):
+def plot_calibration_curves(preds, ys, names=None, fig=None, ax=None,
+                            figsize=(8, 5), n_bins=10, avg_curve=True,
+                            return_err=False, class1='Class 1', plt_ttl=None):
     """ Plots calibration curves for a probabilistic binary classifier
 
     Reference: https://scikit-learn.org/stable/modules/calibration.html
@@ -27,9 +27,12 @@ def plot_calibration_curves(preds, ys, names=None, figsize=(8, 5),
         preds: list = test data predictions for each model
         ys: list = test data ground truths
         names: list = the model names, for plotting the legend
+        fig: matplotlib figure = a figure object to be plotted on
+        ax: matplotlib axes = an axes object to be plotted on
         figsize: tuple = the (width, height) size of the matplotlib figure
         n_bins: int = the number of probability bins used for calibration
         avg_curve: bool = indicates whether to average across models_and_analysis
+        return_err: bool = if True, return a measure of the calibration
         class1: str = the name of class 1, for plotting
         plt_ttl: str = the title of the plot (default to None)
 
@@ -44,12 +47,14 @@ def plot_calibration_curves(preds, ys, names=None, figsize=(8, 5),
         names = [f'Model {i + 1}' for i in range(len(preds))]
 
     # Initialize the plot and create the names (if none given)
-    fig, ax = plt.subplots(1, 1, figsize=figsize)
+    if ax is None:
+        fig, ax = plt.subplots(1, 1, figsize=figsize)
     ax2 = ax.twinx()
 
     all_cnts = np.zeros((len(preds), n_bins))
     all_mean_pred = np.zeros_like(all_cnts)
     all_true_frac = np.zeros_like(all_cnts)
+    wtd_rmse = np.zeros(len(preds))
     bins = np.linspace(0, 1, n_bins + 1)
     for i, (y_pred, y_true) in enumerate(zip(preds, ys)):
         # Calculate the calibration curve data
@@ -65,6 +70,11 @@ def plot_calibration_curves(preds, ys, names=None, figsize=(8, 5),
         all_cnts[i, :] = counts
         all_mean_pred[i, :] = mean_pred
         all_true_frac[i, :] = true_frac
+
+        # Calculate the weighted root-mean-square calibration error
+        cal_err = mean_pred - true_frac
+        wtd_cnts = counts / sum(counts)
+        wtd_rmse[i] = np.sqrt(np.nanmean(cal_err**2 * wtd_cnts))
 
     # Plot the calibration curve(s) and prediction distribution(s)
     xs = bins[:-1] + np.diff(bins)[0] / 2
@@ -99,7 +109,16 @@ def plot_calibration_curves(preds, ys, names=None, figsize=(8, 5),
     #     ax.legend(loc='upper left', bbox_to_anchor=(1.0, 1.02))
     ax2.set_ylabel(f"Count of '{class1}' in Bin", fontsize=12)
 
-    return fig, ax, ax2
+    if ax is None:
+        if return_err:
+            return fig, ax, ax2, wtd_rmse
+        else:
+            return fig, ax, ax2
+    else:
+        if return_err:
+            return ax2, wtd_rmse
+        else:
+            return ax2
 
 
 def plot_in_game_probs(shots_df, home_win, team_names, x_scalers, models,
