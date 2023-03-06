@@ -48,19 +48,6 @@ shots_df.drop(shots_df[shots_df.game_id.isin(overtime_games.game_id.tolist())].
               index, inplace=True)
 shots_df.reset_index(drop=True, inplace=True)
 
-# # Remove overtime shots
-# print(f'Number of shots in overtime = {len(shots_df[shots_df.period > 3])} '
-#       f'({100 * len(shots_df[shots_df.period > 3]) / len(shots_df):4.2f}% of all shots)')
-# shots_df.drop(shots_df[shots_df.period > 3].index, inplace=True)
-# shots_df.reset_index(drop=True, inplace=True)
-
-# # Remove shootout games
-# shootout_games = games_df.loc[games_df.shootout]
-# print(f'Number of shootout games = {len(shootout_games)} '
-#       f'({100 * len(shootout_games) / len(games_df):4.2f}% of all games)')
-# shots_df.drop(shots_df[shots_df.game_id.isin(shootout_games.game_id.tolist())].index, inplace=True)
-# shots_df.reset_index(drop=True, inplace=True)
-
 # Remove playoff games
 playoff_games = games_df.loc[games_df.type == 'PLA']
 print(f'Number of playoff games = {len(playoff_games)} '
@@ -97,8 +84,7 @@ for i, game_id in enumerate(game_id_list):
     goal_diff = 0
     shot_diff = 0
     prev_time = 0
-    # shots_list = shots_df[shots_df.game_id == game_id].to_dict('records')
-    shots_list = shots_gb.get_group(int(game_id))
+    shots_list = shots_gb.get_group(int(game_id)).to_dict('records')
 
     # Initialize the second array
     game_sec_inputs = np.zeros((game_len, len(data_cols)))
@@ -106,19 +92,16 @@ for i, game_id in enumerate(game_id_list):
     # game_sec_inputs[:, -2] = np.arange(game_len)
     game_sec_inputs[:, -1] = 1 if games[game_id]['home_win'] else 0
     for j, shot in enumerate(shots_list):
-        # Update the game time
-        # period = shot['period']
-        # period_time = shot['period_time']
-        # next_time = (period - 1) * 20 * 60 + game_time_to_sec(period_time)
-
         # Record the data between the previous and current shots
         this_time = shot['shot_time']
-        if j < (len(shots_list) - 1):
-            game_sec_inputs[prev_time:this_time, 0] = goal_diff
-            game_sec_inputs[prev_time:this_time, 1] = shot_diff
-        else:
-            game_sec_inputs[prev_time:, 0] = goal_diff
-            game_sec_inputs[prev_time:, 1] = shot_diff
+        game_sec_inputs[prev_time:this_time, 0] = goal_diff
+        game_sec_inputs[prev_time:this_time, 1] = shot_diff
+        # if j < (len(shots_list) - 1):
+        #     game_sec_inputs[prev_time:this_time, 0] = goal_diff
+        #     game_sec_inputs[prev_time:this_time, 1] = shot_diff
+        # else:
+        #     game_sec_inputs[prev_time:, 0] = goal_diff
+        #     game_sec_inputs[prev_time:, 1] = shot_diff
         prev_time = this_time
 
         # Update shot differential
@@ -129,6 +112,10 @@ for i, game_id in enumerate(game_id_list):
 
         # Update goal differential
         goal_diff = shot['home_score'] - shot['away_score']
+
+    # Add data after last shot
+    game_sec_inputs[prev_time:, 0] = goal_diff
+    game_sec_inputs[prev_time:, 1] = shot_diff
 
     # Subsample the game
     sample_inds = np.random.choice(game_len, size=n_samples, replace=False)

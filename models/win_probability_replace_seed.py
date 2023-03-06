@@ -35,13 +35,13 @@ shots_df = shots_df.loc[shots_df.shot_result.isin(['GOAL', 'SHOT'])]
 # Remove select data from dataset
 print('Removed:')
 
-# Remove empty net goals
-en_goals = shots_df[shots_df.empty_net == True]
-frac_en_goals = len(en_goals) / len(shots_df[shots_df.shot_result == "GOAL"])
-print(f'Number of goals on empty nets = {len(en_goals)} '
-      f'({100 * frac_en_goals:4.2f}% of all goals)')
-shots_df.drop(en_goals.index, inplace=True)
-shots_df.reset_index(drop=True, inplace=True)
+# # Remove empty net goals
+# en_goals = shots_df[shots_df.empty_net == True]
+# frac_en_goals = len(en_goals) / len(shots_df[shots_df.shot_result == "GOAL"])
+# print(f'Number of goals on empty nets = {len(en_goals)} '
+#       f'({100 * frac_en_goals:4.2f}% of all goals)')
+# shots_df.drop(en_goals.index, inplace=True)
+# shots_df.reset_index(drop=True, inplace=True)
 
 # Remove overtime games
 overtime_games = games_df.loc[games_df.number_periods > 3]
@@ -84,8 +84,8 @@ test_ids = [test_game_id1, test_game_id2]
 shots_df.drop(shots_df[shots_df.game_id.isin(test_ids)].index, inplace=True)
 shots_df.reset_index(drop=True, inplace=True)
 
-# Convert the shots to a list
-shots_list = shots_df.to_dict('records')
+# Group the shots by game ID
+shots_gb = shots_df.groupby('game_id')
 
 # Define the input features and target variable
 data_cols = ['goal_diff', 'shot_diff', 'game_time', 'home_win']
@@ -99,14 +99,24 @@ for i, game_id in enumerate(game_id_list):
     goal_diff = 0
     shot_diff = 0
     prev_time = 0
-    shots_list = shots_df[shots_df.game_id == game_id].to_dict('records')
+    shots_list = shots_gb.get_group(int(game_id))
 
     # Initialize the second array
     game_sec_inputs = np.zeros((game_len, len(data_cols)))
-    # game_sec_inputs[:, 2] = np.arange(game_len)[::-1]
-    game_sec_inputs[:, -2] = np.arange(game_len)
+    game_sec_inputs[:, 2] = np.arange(game_len)[::-1]
+    # game_sec_inputs[:, -2] = np.arange(game_len)
     game_sec_inputs[:, -1] = 1 if games[game_id]['home_win'] else 0
     for j, shot in enumerate(shots_list):
+        # Record the data between the previous and current shots
+        this_time = shot['shot_time']
+        if j < (len(shots_list) - 1):
+            game_sec_inputs[prev_time:this_time, 0] = goal_diff
+            game_sec_inputs[prev_time:this_time, 1] = shot_diff
+        else:
+            game_sec_inputs[prev_time:, 0] = goal_diff
+            game_sec_inputs[prev_time:, 1] = shot_diff
+        prev_time = this_time
+
         # Update shot differential
         if shot['shooter_home']:
             shot_diff += 1
@@ -115,20 +125,6 @@ for i, game_id in enumerate(game_id_list):
 
         # Update goal differential
         goal_diff = shot['home_score'] - shot['away_score']
-
-        # Update game time
-        period = shot['period']
-        period_time = shot['period_time']
-        next_time = (period - 1) * 20 * 60 + game_time_to_sec(period_time)
-
-        # Record the data
-        if j < (len(shots_list) - 1):
-            game_sec_inputs[prev_time:next_time, 0] = goal_diff
-            game_sec_inputs[prev_time:next_time, 1] = shot_diff
-        else:
-            game_sec_inputs[prev_time:, 0] = goal_diff
-            game_sec_inputs[prev_time:, 1] = shot_diff
-        prev_time = next_time
 
     # Subsample the game
     sample_inds = np.random.choice(game_len, size=n_samples, replace=False)
@@ -149,22 +145,7 @@ for model in ens_models:
     ens_seeds.append(model['seed'])
     # print(model['seed'])
 
-# # Define the ensemble seeds
-# ens_seeds = [99669, 41975, 77840, 92597, 30427, 86846, 54781, 72793, 46298,
-#              26165, 83651, 10038, 37807, 52924, 99469, 49268, 40677, 41554,
-#              74175, 52253, 38737, 29474, 65014, 40201, 81510, 15734, 48159,
-#              38745, 85609, 70848, 12202, 38238, 21620, 82789, 38227, 41272,
-#              10766, 78230, 92645, 57404, 13953, 51528, 77956, 16312, 39888,
-#              14233, 94609, 18560, 37869, 42528, 16774, 46723, 99723, 63358,
-#              88686, 34055, 90634, 50828, 62138, 98342, 12877, 21804, 46297,
-#              69679, 14908, 66319, 25344, 45295, 45762, 85837, 89508, 90239,
-#              93787, 38709, 11577, 76755, 38157, 51337, 28136, 62995, 15447,
-#              70171, 74787, 62355, 18063, 28649, 26921, 48649, 45868, 96410,
-#              24827, 13452, 31095, 51836, 26267, 24095, 39206, 27959, 75098,
-#              54366]
-
 # Define hyperparameters
-# ens_size = len(ens_seeds)
 learning_rate = 1e-4
 batch_size = 512
 n_epochs = 25
@@ -239,7 +220,7 @@ for i, d_model in enumerate(ens_models):
     d_model['test_acc'] = test_acc
 
 # Print the time taken
-print(f'Took {timedelta(seconds=time() - t0_start)} to train the whole ensemble')
+print(f'Took {timedelta(seconds=time() - t0_start)} to resample the ensemble')
 
 # Save the models_and_analysis
 with open(froot + '/../data/in_game_win_prediction_ensemble.pkl', 'wb') as f:
