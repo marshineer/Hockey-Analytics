@@ -2,9 +2,6 @@ import numpy as np
 import pandas as pd
 
 
-# Modelling TODOs
-# TODO: Should the rink be divided into zones, or left as a continuous variable?
-
 def calc_travel_dist(city1, city2):
     """ Calculates the distance (km) between two cities.
 
@@ -101,7 +98,7 @@ def binary_encoder(data, col_ls):
     return enc_data, n_enc_col
 
 
-def sort_game_states(shots, players, return_index=False, inc_other=False):
+def sort_game_states(shots, return_index=False, inc_other=True):
     """ Sorts the events into player strength game state categories.
 
     For each event, the number of players on each team is checked, and the game
@@ -113,18 +110,19 @@ def sort_game_states(shots, players, return_index=False, inc_other=False):
 
     Parameters
         shots: list = all shot data
-        players: dict = all player data, keyed by player ID
         return_index: bool = return the full dataframes or just the indices
         inc_other: bool = include the 'other' category in returned data
 
     Returns
-        even_5v5:list = even strength shots at 5-on-5
-        even_4v4:list = even strength shots at 4-on-4
-        even_3v3:list = even strength shots at 3-on-3
-        pp_5v4:list = power play shots at 5-on-4
-        pp_5v3:list = power play shots at 5-on-3
-        pk_Xv5:list = all penalty kill shots
-        other:list = all other shots
+        even_5v5: list = even strength shots at 5-on-5
+        even_4v4: list = even strength shots at 4-on-4
+        even_3v3: list = even strength shots at 3-on-3
+        pp_5v4: list = power play shots at 5-on-4
+        pp_5v3: list = power play shots at 5-on-3
+        pp_4v3: list = power play shots at 4-on-3
+        all_pk: list = all penalty kill shots (3v5, 4v5, 3v4)
+        empty_net: list = shots taken
+        other: list = all other shots
     """
 
     even_5v5 = []
@@ -132,33 +130,21 @@ def sort_game_states(shots, players, return_index=False, inc_other=False):
     even_3v3 = []
     pp_5v4 = []
     pp_5v3 = []
-    pk_Xv5 = []
+    pp_4v3 = []
+    all_pk = []
+    empty_net = []
     other = []
-    for i, shot in enumerate(shots):
-        n_home, n_away, empty_net = calc_on_ice_players(shot, players)
-        if empty_net:
-            other.append(shot)
-            continue
+    for shot in shots:
+        # Check for empty nets
         home_shot = shot['shooter_home']
-        # home_players = eval(shot['players_home'])
-        # n_home = len(home_players)
-        # away_players = eval(shot['players_away'])
-        # n_away = len(away_players)
-        #
-        # # Check for empty net condition
-        # home_en = True
-        # away_en = True
-        # for player in home_players:
-        #     if players[player]['position'] == 'G':
-        #         home_en = False
-        # for player in away_players:
-        #     if players[player]['position'] == 'G':
-        #         away_en = False
-        # if home_en or away_en:
-        #     other.append(shot)
-        #     continue
+        home_en = shot['empty_net_home']
+        away_en = shot['empty_net_away']
+        if (home_shot and away_en) or (not home_shot and home_en):
+            empty_net.append(shot)
+            continue
 
         # Check for other game states
+        n_home, n_away = calc_on_ice_players(shot)
         if n_home == 6 and n_away == 6:
             even_5v5.append(shot)
         elif n_home == 5 and n_away == 5:
@@ -170,8 +156,10 @@ def sort_game_states(shots, players, return_index=False, inc_other=False):
                 pp_5v4.append(shot)
             elif n_home == 6 and n_away == 4:
                 pp_5v3.append(shot)
-            elif n_home < 6 and n_away == 6:
-                pk_Xv5.append(shot)
+            elif n_home == 5 and n_away == 4:
+                pp_4v3.append(shot)
+            elif n_home < n_away:
+                all_pk.append(shot)
             else:
                 other.append(shot)
         elif not home_shot:
@@ -179,8 +167,10 @@ def sort_game_states(shots, players, return_index=False, inc_other=False):
                 pp_5v4.append(shot)
             elif n_away == 6 and n_home == 4:
                 pp_5v3.append(shot)
-            elif n_away < 6 and n_home == 6:
-                pk_Xv5.append(shot)
+            elif n_away == 5 and n_home == 4:
+                pp_4v3.append(shot)
+            elif n_away < n_home:
+                all_pk.append(shot)
             else:
                 other.append(shot)
         else:
@@ -188,12 +178,14 @@ def sort_game_states(shots, players, return_index=False, inc_other=False):
 
     # Store or reset the indices
     if inc_other:
-        game_states = [even_5v5, even_4v4, even_3v3, pp_5v4, pp_5v3, pk_Xv5,
-                       other]
-        game_state_lbls = ['5v5', '4v4', '3v3', '5v4', '5v3', 'Xv5', 'other']
+        game_states = [even_5v5, even_4v4, even_3v3, pp_5v4, pp_5v3, pp_4v3,
+                       all_pk, empty_net, other]
+        game_state_lbls = ['5v5', '4v4', '3v3', '5v4', '5v3', '4v3', 'PK', 'EN',
+                           'other']
     else:
-        game_states = [even_5v5, even_4v4, even_3v3, pp_5v4, pp_5v3, pk_Xv5]
-        game_state_lbls = ['5v5', '4v4', '3v3', '5v4', '5v3', 'Xv5']
+        game_states = [even_5v5, even_4v4, even_3v3, pp_5v4, pp_5v3, pp_4v3,
+                       all_pk, empty_net]
+        game_state_lbls = ['5v5', '4v4', '3v3', '5v4', '5v3', '4v3', 'PK', 'EN']
 
     if return_index:
         output = []
@@ -204,7 +196,7 @@ def sort_game_states(shots, players, return_index=False, inc_other=False):
         return game_states, game_state_lbls
 
 
-def calc_on_ice_players(shot, players):
+def calc_on_ice_players(shot):
     """ Calculate the game state for a particular shot.
 
     Parameters
@@ -215,6 +207,8 @@ def calc_on_ice_players(shot, players):
         n_home: int = number of players on ice for the home team
         n_away: int = number of players on ice for the away team
         empty_net: bool = True if at least one net is empty
+        en_home: bool = True if at the home team's net is empty
+        en_away: bool = True if at the away team's net is empty
     """
 
     # Determine number of players for each team
@@ -223,13 +217,4 @@ def calc_on_ice_players(shot, players):
     away_players = eval(shot['players_away'])
     n_away = len(away_players)
 
-    # Check for empty net condition
-    empty_net = False
-    for player in home_players:
-        if players[player]['position'] == 'G':
-            empty_net = True
-    for player in away_players:
-        if players[player]['position'] == 'G':
-            empty_net = True
-
-    return n_home, n_away, empty_net
+    return n_home, n_away
