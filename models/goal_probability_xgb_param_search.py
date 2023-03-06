@@ -33,7 +33,6 @@ players_df = select_table(connection, 'players')
 players_list = players_df.to_dict('records')
 players = {player_x['player_id']: player_x for player_x in players_list}
 
-# TODO: if these come from a small subset of games, just remove the entire games
 # Remove rows where the shift data contained errors
 too_few_df = shots_df[shots_df.players_home.apply(lambda x: len(eval(x)) < 4) &
                       shots_df.players_away.apply(lambda x: len(eval(x)) < 4)]
@@ -47,6 +46,7 @@ shots_df = shots_df[shots_df.players_home.apply(lambda x: len(eval(x)) >= 4) &
                     shots_df.players_home.apply(lambda x: len(eval(x)) <= 6) &
                     shots_df.players_away.apply(lambda x: len(eval(x)) <= 6)]
 
+# TODO: in ref9... set these to an average p(goal) value
 # Remove rows with nan/null shot distance or angle
 n_nan = len(shots_df[shots_df.net_distance.isna() | shots_df.net_angle.isna()])
 print(f'Number of shots with no distance info = {n_nan} '
@@ -54,7 +54,7 @@ print(f'Number of shots with no distance info = {n_nan} '
 shots_df.dropna(subset=['net_distance', 'net_angle'], inplace=True)
 shots_df.reset_index(drop=True, inplace=True)
 
-# TODO: maybe set these to (0, 0)?
+# TODO: in ref9... set these to an average p(goal) value for the given location
 # Remove rows with nan/null previous shot coordinates
 null_prev_mask = (shots_df.angle_change.isna() | shots_df.delta_x.isna() |
                   shots_df.delta_y.isna())
@@ -75,6 +75,7 @@ print(f'Number of shots that are blocked = '
 shots_df.drop(shots_df.loc[block_mask].index, inplace=True)
 shots_df.reset_index(drop=True, inplace=True)
 
+# TODO: in ref9... set p(goal) to 0 (should not be high anyway)
 # Remove all shots that come from outside the blueline
 long_mask = (((shots_df.period % 2 == 1) ^ (shots_df.shooter_home == True)) &
              (shots_df.x_coord < 25)) | \
@@ -89,6 +90,7 @@ shots_df.reset_index(drop=True, inplace=True)
 shots_df.drop(shots_df.loc[shots_df.shooter_position == 'G'].index, inplace=True)
 shots_df.reset_index(drop=True, inplace=True)
 
+# TODO: in ref9... set p(goal) to 0 (impossible to shoot from here)
 # Remove shots from directly behind the net
 # The net is 72" wide and 40" deep, angle center to back corner = 138 degrees
 behind_net_mask = (shots_df.net_angle > 138) | (shots_df.net_angle < -138)
@@ -110,12 +112,15 @@ shots_df.loc[shots_df.shooter_position == 'D', 'shooter_position'] = 0
 shots_df.loc[shots_df.shooter_position == 'F', 'shooter_position'] = 1
 shots_df.goal = shots_df.goal.astype(int)
 
+# TODO: update everything to reflect the combined model with different models for
+#  the game states: even, PP, PK, pulled goalie (with booleans or n_player feats)
+# TODO: change this to sort into: even, PP, PK, empty net, and other states
 # Divide the shots into their game states
-game_states, state_lbls = sort_game_states(shots_df.to_dict('records'), players)
+game_states, state_lbls = sort_game_states(shots_df.to_dict('records'))
 
 # Select a subset of features
 feat_cols = ['net_distance', 'net_angle', 'delta_x', 'delta_y', 'angle_change',
-             'time_since_last', 'team_lead', 'shot_time', 'shooter_age',
+             'time_since_last', 'goal_lead_prior', 'shot_time', 'shooter_age',
              'rebound_shot', 'shooter_home', 'shooter_hand', 'shooter_position',
              'off_wing_shot', 'last_same_end', 'last_same_team', 'last_turnover',
              'goal']
