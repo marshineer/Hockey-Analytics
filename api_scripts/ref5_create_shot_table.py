@@ -91,6 +91,8 @@ for i, event_x in enumerate(all_events):
     home_shot = shot_x['shooterHome']
     # home_end = bool(home_shot) ^ bool(period % 2 == 1)
     home_end = home_shot ^ bool(period % 2 == 1)
+    shot_x['pulledGoalie'] = (home_shot and event_x['emptyNetHome']) or \
+                             (not home_shot and event_x['emptyNetAway'])
     x, y = float(shot_x['xCoord']), float(shot_x['yCoord'])
     shot_x['netDistance'] = calc_coord_diff(x, y, home_end=home_end)
     shot_x['netAngle'] = calc_net_angle(x, y, home_end=home_end)

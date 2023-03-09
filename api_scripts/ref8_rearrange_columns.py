@@ -131,7 +131,7 @@ shot_cols = ['GameID', 'ShotID', 'shooterID', 'assist1ID', 'assist2ID',
              'puckFrozen', 'goal', 'missed', 'blocked', 'emptyNet',
              'shooterHome', 'shooterAge', 'shooterSeasons', 'shooterHand',
              'shooterPosition', 'offWingShot', 'emptyNetHome', 'emptyNetAway',
-             'playersHome', 'playersAway']
+             'pulledGoalie', 'playersHome', 'playersAway']
 shots_df = shots_df[shot_cols]
 new_shot_col = ['game_id', 'shot_id', 'shooter_id', 'assist1_id', 'assist2_id',
                 'shot_type', 'shot_result', 'period', 'period_time', 'shot_time',
@@ -145,7 +145,8 @@ new_shot_col = ['game_id', 'shot_id', 'shooter_id', 'assist1_id', 'assist2_id',
                 'puck_frozen', 'goal', 'missed', 'blocked', 'empty_net_goal',
                 'shooter_home', 'shooter_age', 'shooter_seasons', 'shooter_hand',
                 'shooter_position', 'off_wing_shot', 'empty_net_home',
-                'empty_net_away', 'players_home', 'players_away']
+                'empty_net_away', 'pulled_goalie', 'players_home',
+                'players_away']
 shots_df.columns = new_shot_col
 shots_df.sort_values(['game_id', 'shot_id'], inplace=True)
 new_shots = shots_df.to_dict('records')

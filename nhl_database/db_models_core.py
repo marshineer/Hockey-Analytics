@@ -156,6 +156,7 @@ shots = Table(
     Column('off_wing_shot', Boolean),
     Column('empty_net_home', Boolean),
     Column('empty_net_away', Boolean),
+    Column('pulled_goalie', Boolean),
     Column('players_home', String),
     Column('players_away', String),
 )
