@@ -201,8 +201,8 @@ for i, seed in enumerate(ens_seeds):
     # Save model as a dictionary
     d_model = {'model': model,
                'seed': seed,
-               'x_train': X_train,
-               'x_test': X_test,
+               # 'x_train': X_train,
+               # 'x_test': X_test,
                'x_scaler': x_scaler,
                'y_train': y_train,
                'y_test': y_test,
