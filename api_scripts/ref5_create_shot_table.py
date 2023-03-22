@@ -147,7 +147,11 @@ for i, event_x in enumerate(all_events):
     # Calculate values dependent on the previous event
     last_type = last_event['eventTypeId']
     shot_x['lastEventType'] = last_type
-    shot_x['lastEventPlayer'] = last_event.get('Player1ID', None)
+    shot_x['lastEventPlayer'] = float(last_event.get('player1ID', None))
+    if shot_x['lastEventPlayer'] == shot_x['lastEventPlayer']:
+        shot_x['lastEventPlayer'] = int(shot_x['lastEventPlayer'])
+    else:
+        shot_x['lastEventPlayer'] = None
     last_period = int(last_event['period'])
     last_period_time = last_event['periodTime']
     last_time = (last_period - 1) * 20 * 60 + game_time_to_sec(last_period_time)
