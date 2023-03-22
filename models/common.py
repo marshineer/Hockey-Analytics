@@ -1,5 +1,7 @@
 import numpy as np
 import pandas as pd
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.model_selection import train_test_split, StratifiedKFold
 
 
 def calc_travel_dist(city1, city2):
@@ -105,8 +107,13 @@ def sort_game_states(shots, return_index=False, inc_other=True):
     state determined (5v5, 5v4, 4v5, etc...). Power plays and penalty kills are
     considered separate game states, defined from the perspective of the player
     associated with the event. The events are then sorted. The following game
-    state categories exist: Even_5v5, Even_4v4, Even_3v3, PP_5v4, PP_5v3, PK_Xv5.
-    Other game states (empty net, 4v3, 3v4) are ignored since they rarely occur.
+    state categories exist: Even_5v5, Even_4v4, Even_3v3, PP_5v4, PP_5v3, PP_4v3,
+    PK_4v5, PK_3v5, PK_3v4, empty_net.
+
+    Game states where the goalie is pulled for the attacking team are not
+    considered different than they would be without the goalie pulled. This
+    is because the shooting percentage with and without the goalie pulled is
+    essentially the same.
 
     Parameters
         shots: list = all shot data
@@ -114,90 +121,74 @@ def sort_game_states(shots, return_index=False, inc_other=True):
         inc_other: bool = include the 'other' category in returned data
 
     Returns
-        even_5v5: list = even strength shots at 5-on-5
-        even_4v4: list = even strength shots at 4-on-4
-        even_3v3: list = even strength shots at 3-on-3
-        pp_5v4: list = power play shots at 5-on-4
-        pp_5v3: list = power play shots at 5-on-3
-        pp_4v3: list = power play shots at 4-on-3
-        all_pk: list = all penalty kill shots (3v5, 4v5, 3v4)
-        empty_net: list = shots taken
+        even_shots: list = all even strength shots (5v5, 4v4, 3v3)
+        pp_shots: list = all power play shots at (5v4, 5v3, 4v3, 6v5, 6v4, 6v3)
+        pk_shots: list = all penalty kill shots (3v5, 4v5, 3v4)
+        empty_net: list = shots taken on empty nets
         other: list = all other shots
     """
 
-    even_5v5 = []
-    even_4v4 = []
-    even_3v3 = []
-    pp_5v4 = []
-    pp_5v3 = []
-    pp_4v3 = []
-    all_pk = []
-    empty_net = []
-    other = []
-    for shot in shots:
-        # Check for empty nets
+    even_shots = []
+    pp_shots = []
+    pk_shots = []
+    en_shots = []
+    other_shots = []
+    for ind, shot in enumerate(shots):
         home_shot = shot['shooter_home']
-        home_en = shot['empty_net_home']
-        away_en = shot['empty_net_away']
-        if (home_shot and away_en) or (not home_shot and home_en):
-            empty_net.append(shot)
-            continue
-
-        # Check for other game states
+        en_home = shot['empty_net_home']
+        en_away = shot['empty_net_away']
         n_home, n_away = calc_on_ice_players(shot)
-        if n_home == 6 and n_away == 6:
-            even_5v5.append(shot)
-        elif n_home == 5 and n_away == 5:
-            even_4v4.append(shot)
-        elif n_home == 4 and n_away == 4:
-            even_3v3.append(shot)
-        elif home_shot:
-            if n_home == 6 and n_away == 5:
-                pp_5v4.append(shot)
-            elif n_home == 6 and n_away == 4:
-                pp_5v3.append(shot)
-            elif n_home == 5 and n_away == 4:
-                pp_4v3.append(shot)
-            elif n_home < n_away:
-                all_pk.append(shot)
-            else:
-                other.append(shot)
-        elif not home_shot:
-            if n_away == 6 and n_home == 5:
-                pp_5v4.append(shot)
-            elif n_away == 6 and n_home == 4:
-                pp_5v3.append(shot)
-            elif n_away == 5 and n_home == 4:
-                pp_4v3.append(shot)
-            elif n_away < n_home:
-                all_pk.append(shot)
-            else:
-                other.append(shot)
+        state, strength = get_game_state(n_home, n_away, en_home, en_away,
+                                         home_shot)
+
+        if state == 'empty_net':
+            en_shots.append(ind)
+        elif state == 'Even':
+            if strength == '5v5':
+                shot.update({'5v5': 1, '4v4': 0, '3v3': 0})
+            elif strength == '4v4':
+                shot.update({'5v5': 0, '4v4': 1, '3v3': 0})
+            elif strength == '3v3':
+                shot.update({'5v5': 0, '4v4': 0, '3v3': 1})
+            even_shots.append(ind)
+        elif state == 'PP':
+            if strength == '5v4':
+                shot.update({'5v4': 1, '5v3': 0, '4v3': 0})
+            elif strength == '5v3':
+                shot.update({'5v4': 0, '5v3': 1, '4v3': 0})
+            elif strength == '4v3':
+                shot.update({'5v4': 0, '5v3': 0, '4v3': 1})
+            pp_shots.append(ind)
+        elif state == 'PK':
+            if strength == '4v5':
+                shot.update({'4v5': 1, '3v5': 0, '3v4': 0})
+            elif strength == '3v5':
+                shot.update({'4v5': 0, '3v5': 1, '3v4': 0})
+            elif strength == '3v4':
+                shot.update({'4v5': 0, '3v5': 0, '3v4': 1})
+            pk_shots.append(ind)
         else:
-            other.append(shot)
+            other_shots.append(ind)
 
-    # Store or reset the indices
+    if not return_index:
+        even_shots = [shots[i] for i in even_shots]
+        pp_shots = [shots[i] for i in pp_shots]
+        pk_shots = [shots[i] for i in pk_shots]
+        en_shots = [shots[i] for i in en_shots]
+        other_shots = [shots[i] for i in other_shots]
+
     if inc_other:
-        game_states = [even_5v5, even_4v4, even_3v3, pp_5v4, pp_5v3, pp_4v3,
-                       all_pk, empty_net, other]
-        game_state_lbls = ['5v5', '4v4', '3v3', '5v4', '5v3', '4v3', 'PK', 'EN',
-                           'other']
+        game_states = [even_shots, pp_shots, pk_shots, en_shots, other_shots]
+        game_state_lbls = ['Even', 'PP', 'PK', 'EN', 'Other']
     else:
-        game_states = [even_5v5, even_4v4, even_3v3, pp_5v4, pp_5v3, pp_4v3,
-                       all_pk, empty_net]
-        game_state_lbls = ['5v5', '4v4', '3v3', '5v4', '5v3', '4v3', 'PK', 'EN']
+        game_states = [even_shots, pp_shots, pk_shots, en_shots]
+        game_state_lbls = ['Even', 'PP', 'PK', 'EN']
 
-    if return_index:
-        output = []
-        for state in game_states:
-            output.append(state.index)
-        return output, game_state_lbls
-    else:
-        return game_states, game_state_lbls
+    return game_states, game_state_lbls
 
 
 def calc_on_ice_players(shot):
-    """ Calculate the game state for a particular shot.
+    """ Calculate the number of on-ice players for each team for a given shot.
 
     Parameters
         shot: dict = single shot data
@@ -210,11 +201,188 @@ def calc_on_ice_players(shot):
         en_home: bool = True if at the home team's net is empty
         en_away: bool = True if at the away team's net is empty
     """
-
-    # Determine number of players for each team
     home_players = eval(shot['players_home'])
     n_home = len(home_players)
     away_players = eval(shot['players_away'])
     n_away = len(away_players)
 
     return n_home, n_away
+
+
+def get_game_state(n_home, n_away, en_home, en_away, home_shot):
+    """ Determines the game state given number of players and empty nets.
+
+    Parameters
+        n_home: int = number of on-ice players for the home team
+        n_away: int = number of on-ice players for the away team
+        en_home: bool = whether the home team's goalie is pulled
+        en_away: bool = whether the away team's goalie is pulled
+        home_shot: bool = whether the shooter is on the home team
+
+    Returns
+        state: str = game state for the given configuration
+        strength: str = teams strengths for the given state
+    """
+    # TODO: maybe remove the empty net and pulled goalie states?
+    #  (these can be calculated in the higher level function)
+    if (home_shot and en_away) or (not home_shot and en_home):
+        return 'empty_net', ''
+    # elif (home_shot and en_home) or (not home_shot and en_away):
+    #     return 'pulled_goalie', ''
+    elif n_home == n_away:
+        if n_home == 6 and n_away == 6:
+            return 'Even', '5v5'
+        elif n_home == 5 and n_away == 5:
+            return 'Even', '4v4'
+        elif n_home == 4 and n_away == 4:
+            return 'Even', '3v3'
+    elif home_shot:
+        if n_home > n_away:
+            if n_home == 6 and n_away == 5:
+                return 'PP', '5v4'
+            elif n_home == 6 and n_away == 4:
+                return 'PP', '5v3'
+            elif n_home == 5 and n_away == 4:
+                return 'PP', '4v3'
+        else:
+            if n_home == 5 and n_away == 6:
+                return 'PK', '4v5'
+            elif n_home == 4 and n_away == 6:
+                return 'PK', '3v5'
+            elif n_home == 4 and n_away == 5:
+                return 'PK', '3v4'
+    elif not home_shot:
+        if n_home < n_away:
+            if n_away == 6 and n_home == 5:
+                return 'PP', '5v4'
+            elif n_away == 6 and n_home == 4:
+                return 'PP', '5v3'
+            elif n_away == 5 and n_home == 4:
+                return 'PP', '4v3'
+        else:
+            if n_away == 5 and n_home == 6:
+                return 'PK', '4v5'
+            elif n_away == 4 and n_home == 6:
+                return 'PK', '3v5'
+            elif n_away == 4 and n_home == 5:
+                return 'PK', '3v4'
+
+
+def split_train_test_sets(data_df, cont_feats, bool_feats, target='goal',
+                          stratify_feat=None, shuffle=True, test_frac=0.15,
+                          shuffle_seed=66, train_seasons=None, test_seasons=None,
+                          return_scaler=False):
+    """ Split data with a binary target feature into training and test sets.
+
+    Select the required features, split the data into training and test sets,
+    and scale the continuous features to the range [0, 1].
+
+    If the data is shuffled, the training and test sets are stratified.
+    Stratification means the samples will be distributed such that the chosen
+    stratification feature will be distributed among the training and test sets
+    according to the ratio set by the test fraction. If stratified by the target
+    class, the frequency of the target class follows this ratio. If a feature is
+    specified, the distribution of classes feature can be created that allows
+    the stratification to incorporate multiple feature columns.
+
+    Rather than shuffling, a list of seasons may be specified for the training
+    and test sets. In this case, the data is unshuffled and returned in the
+    order specified by the respective season lists.
+
+    Parameters
+        data_df: dataframe = all data required to train and test the model
+        cont_feats: list = input columns containing continuous features
+        bool_feats: list = input columns containing boolean features
+        target: str = name of the target feature
+        stratify_feat: str = name of the feature used for stratification
+        shuffle: bool = whether to split the data by randomly shuffling it
+        test_frac: float = fraction of data used for testing
+        shuffle_seed: int = random generator seed used for reproducibility
+        train_seasons: list = seasons to use for training
+        test_seasons: list = seasons to use for testing
+        return_scaler: bool = whether to return the sklearn MinMaxScaler
+
+    Returns
+        X_train: array = training data (samples, features)
+        X_test: array = test data (samples, features)
+        y_train: array = training labels (samples)
+        y_test: array = test labels (samples)
+        x_scaler: MinMaxScaler = scalter fit using training data
+    """
+
+    # Split the data
+    input_cols = cont_feats + bool_feats
+    if shuffle:
+        if stratify_feat is None:
+            strat_col = data_df[target]
+        else:
+            strat_col = data_df[stratify_feat]
+        input_df = data_df[input_cols]
+        target_df = data_df[target]
+        split = train_test_split(input_df, target_df, test_size=test_frac,
+                                 random_state=shuffle_seed, stratify=strat_col)
+        X_train, X_test, y_train, y_test = split
+    else:
+        train_df = data_df[data_df.season.isin(train_seasons)][input_cols]
+        X_train = train_df[input_cols]
+        y_train = train_df[target]
+        test_df = data_df[data_df.season.isin(test_seasons)][input_cols]
+        X_test = test_df[input_cols]
+        y_test = test_df[target]
+
+    # Scale the data
+    X_train, x_scaler = normalize_continuous(X_train, cont_feats)
+    X_test = normalize_continuous(X_test, cont_feats, scaler=x_scaler)[0]
+
+    if return_scaler:
+        return X_train, X_test, y_train, y_test, x_scaler
+    else:
+        return X_train, X_test, y_train, y_test
+
+
+def normalize_continuous(data_df, continuous_feats, scaler=None):
+    """ Scale a selection of continuous features to the range [0, 1]
+
+    Parameters
+        data_df: dataframe = all feature data for a training set
+        continuous_feats: list = continuous feature columns to scale
+        scaler: MinMaxScaler = previously fit scaler
+
+    Returns
+        norm_df: dataframe = the original data with select features normalized
+    """
+    if scaler is None:
+        scaler = MinMaxScaler()
+        scaler.fit(data_df[continuous_feats].values)
+
+    train_norm = scaler.transform(data_df[continuous_feats].values)
+    data_df[continuous_feats] = train_norm
+
+    return data_df, scaler
+
+
+def create_stratify_feat(stratify_cols):
+    """ Creates a string identifier used to stratify along multiple columns.
+
+    Stratification allows the distribution of a particular feature (or
+    combination of features) to follow a given ratio. It is used when a dataset
+    is divided into groups, for example, during cross-validation training or
+    when splitting the data into training and test sets. The output of this
+    function may be passed to sklearn functions which allow stratification,
+    enabling stratification across multiple features. Two examples of functions
+    that accept this as an input are StratifiedKFold.split() and
+    train_test_split()
+
+    Ref: https://www.geeksforgeeks.org/python-convert-list-characters-string/
+
+    Parameters
+        stratify_cols: series = feature combination used for stratification
+
+    Returns
+        : str = string identifier used to stratify the data
+    """
+    col_names = stratify_cols.index.tolist()
+    stratify_chars = [str(stratify_cols[col]) for col in col_names]
+    stratify_string = ''
+
+    return stratify_string.join(stratify_chars)
