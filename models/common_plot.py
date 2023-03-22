@@ -6,7 +6,8 @@ from torch import Tensor, sigmoid
 
 def plot_calibration_curves(preds, ys, names=None, fig=None, ax=None,
                             figsize=(8, 5), n_bins=10, avg_curve=True,
-                            return_err=False, class1='Class 1', plt_ttl=None):
+                            density=False, return_err=False, class1='Class 1',
+                            plt_ttl=None):
     """ Plots calibration curves for a probabilistic binary classifier
 
     Reference: https://scikit-learn.org/stable/modules/calibration.html
@@ -31,7 +32,8 @@ def plot_calibration_curves(preds, ys, names=None, fig=None, ax=None,
         ax: matplotlib axes = an axes object to be plotted on
         figsize: tuple = the (width, height) size of the matplotlib figure
         n_bins: int = the number of probability bins used for calibration
-        avg_curve: bool = indicates whether to average across models_and_analysis
+        avg_curve: bool = whether to average across models_and_analysis
+        density: bool = whether to plot the prediction density distribution
         return_err: bool = if True, return a measure of the calibration
         class1: str = the name of class 1, for plotting
         plt_ttl: str = the title of the plot (default to None)
@@ -91,7 +93,8 @@ def plot_calibration_curves(preds, ys, names=None, fig=None, ax=None,
             if len(preds) == 1:
                 ax2.bar(xs, counts, color='C1', width=1 / bins.size, alpha=0.4)
             else:
-                ax2.hist(y_pred, bins=bins, color=f'C{i}', histtype='step')
+                ax2.hist(y_pred, bins=bins, color=f'C{i}', density=density,
+                         histtype='step')
 
     # Plot the ideal calibration curve
     ax.plot([0, 1], [0, 1], 'k--', label='Ideal Calibration')
@@ -109,16 +112,10 @@ def plot_calibration_curves(preds, ys, names=None, fig=None, ax=None,
     #     ax.legend(loc='upper left', bbox_to_anchor=(1.0, 1.02))
     ax2.set_ylabel(f"Count of '{class1}' in Bin", fontsize=12)
 
-    if ax is None:
-        if return_err:
-            return fig, ax, ax2, wtd_rmse
-        else:
-            return fig, ax, ax2
+    if return_err:
+        return fig, ax, ax2, wtd_rmse
     else:
-        if return_err:
-            return ax2, wtd_rmse
-        else:
-            return ax2
+        return fig, ax, ax2
 
 
 def plot_in_game_probs(shots_df, home_win, team_names, x_scalers, models,
