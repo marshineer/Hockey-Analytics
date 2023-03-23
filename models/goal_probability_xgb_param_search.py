@@ -12,8 +12,6 @@ from models.common import sort_game_states, create_stratify_feat, \
     normalize_continuous
 
 
-# TODO: calculate the probability of a block for different player positions, net
-#  distances,
 # Dynamically set the CWD
 froot = str(os.path.dirname(__file__))
 
@@ -27,11 +25,6 @@ shots_df = select_table(connection, 'shots')
 # Sort the shot data
 shots_df.sort_values(['game_id', 'shot_id'], inplace=True)
 shots_df.reset_index(drop=True, inplace=True)
-
-# # Load the player data as a dictionary
-# players_df = select_table(connection, 'players')
-# players_list = players_df.to_dict('records')
-# players = {player_x['player_id']: player_x for player_x in players_list}
 
 # Remove rows where the shift data contained errors
 too_few_df = shots_df[shots_df.players_home.apply(lambda x: len(eval(x)) < 4) &
@@ -142,7 +135,6 @@ bool_feats = ['shooter_home', 'forward_shot', 'off_wing_shot', 'rebound_shot',
               'last_same_team', 'turnover_in_shot_end', 'pulled_goalie',
               'prior_faceoff', 'prior_shot', 'prior_miss', 'prior_block',
               'prior_give', 'prior_take', 'prior_hit']
-train_features = cont_feats + bool_feats
 
 # Normalize the continuous features used in training
 shots_df_norm = normalize_continuous(shots_df, cont_feats)[0]
@@ -155,22 +147,22 @@ game_states, state_lbls = sort_game_states(shots_df_norm.to_dict('records'))
 
 # Define the XGBoost hyperparameter ranges
 # https://xgboost.readthedocs.io/en/stable/python/python_api.html
-# xgb_params = {'n_estimators': [50, 100, 200, 400, 800],
-#               'learning_rate': np.linspace(0.01, 0.9, 90),
-#               'subsample': np.linspace(0.2, 1., 9),
-#               'min_child_weight': [1, 5, 10, 20, 40],
-#               'max_leaves': [2, 5, 10, 20, 40, 80],
-#               'max_depth': np.arange(2, 12),
-#               'lambda': [1e-3, 1e-2, 1e-1, 1e0, 1e1, 1e2],
-#               'gamma': [1, 2, 4, 8, 12, 16, 24]}
-# Refinements based on analysis in "my_xG_model_refine_hyperparameters.ipynb"
-xgb_params = {'n_estimators': np.arange(100, 401, 25),
-              'learning_rate': np.linspace(0.01, 0.3, 30),
-              'subsample': np.linspace(0.7, 1., 31),
-              'min_child_weight': np.linspace(1, 10, 91),
-              'max_leaves': np.arange(20, 101, 10),
-              'max_depth': np.arange(3, 10),
-              'gamma': np.linspace(0.01, 0.5, 50)}
+xgb_params = {'n_estimators': [50, 100, 200, 400, 800],
+              'learning_rate': np.linspace(0.01, 0.9, 90),
+              'subsample': np.linspace(0.2, 1., 9),
+              'min_child_weight': [1, 5, 10, 20, 40],
+              'max_leaves': [2, 5, 10, 20, 40, 80],
+              'max_depth': np.arange(2, 12),
+              'lambda': [1e-3, 1e-2, 1e-1, 1e0, 1e1, 1e2],
+              'gamma': [1, 2, 4, 8, 12, 16, 24]}
+# # Refinements based on analysis in "my_xG_model_refine_hyperparameters.ipynb"
+# xgb_params = {'n_estimators': np.arange(100, 401, 25),
+#               'learning_rate': np.linspace(0.01, 0.3, 30),
+#               'subsample': np.linspace(0.7, 1., 31),
+#               'min_child_weight': np.linspace(1, 10, 91),
+#               'max_leaves': np.arange(20, 101, 10),
+#               'max_depth': np.arange(3, 10),
+#               'gamma': np.linspace(0.01, 0.5, 50)}
 
 # Train one XGBoost model to determine the best hyperparameters
 cv_params = {}
@@ -236,7 +228,7 @@ for i, (state_shots, state_lbl) in enumerate(zip(game_states, state_lbls)):
                                           axis=1)
 
     # Split the data into features and target variable
-    bool_cols = bool_feats + strengths
+    train_features = cont_feats + bool_feats + strengths
     X_pd, y_pd = state_df[train_features].values, state_df.goal.values
 
     # Define a stratified cross-validation split
