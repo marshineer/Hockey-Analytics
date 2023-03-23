@@ -4,8 +4,7 @@ import numpy as np
 import pandas as pd
 from time import time
 from datetime import timedelta
-from sklearn.preprocessing import MinMaxScaler
-from sklearn.model_selection import train_test_split, StratifiedKFold
+from sklearn.model_selection import StratifiedKFold
 from sklearn.model_selection import RandomizedSearchCV as RSCV
 from xgboost import XGBClassifier
 from models.common_sql import create_db_connection, select_table
@@ -156,14 +155,22 @@ game_states, state_lbls = sort_game_states(shots_df_norm.to_dict('records'))
 
 # Define the XGBoost hyperparameter ranges
 # https://xgboost.readthedocs.io/en/stable/python/python_api.html
-xgb_params = {'n_estimators': [50, 100, 200, 400, 800],
-              'learning_rate': np.linspace(0.01, 0.9, 90),
-              'subsample': np.linspace(0.2, 1., 9),
-              'min_child_weight': [1, 5, 10, 20, 40],
-              'max_leaves': [2, 5, 10, 20, 40, 80],
-              'max_depth': np.arange(2, 12),
-              'lambda': [1e-3, 1e-2, 1e-1, 1e0, 1e1, 1e2],
-              'gamma': [1, 2, 4, 8, 12, 16, 24]}
+# xgb_params = {'n_estimators': [50, 100, 200, 400, 800],
+#               'learning_rate': np.linspace(0.01, 0.9, 90),
+#               'subsample': np.linspace(0.2, 1., 9),
+#               'min_child_weight': [1, 5, 10, 20, 40],
+#               'max_leaves': [2, 5, 10, 20, 40, 80],
+#               'max_depth': np.arange(2, 12),
+#               'lambda': [1e-3, 1e-2, 1e-1, 1e0, 1e1, 1e2],
+#               'gamma': [1, 2, 4, 8, 12, 16, 24]}
+# Refinements based on analysis in "my_xG_model_refine_hyperparameters.ipynb"
+xgb_params = {'n_estimators': np.arange(100, 401, 25),
+              'learning_rate': np.linspace(0.01, 0.3, 30),
+              'subsample': np.linspace(0.7, 1., 31),
+              'min_child_weight': np.linspace(1, 10, 91),
+              'max_leaves': np.arange(20, 101, 10),
+              'max_depth': np.arange(3, 10),
+              'gamma': np.linspace(0.01, 0.5, 50)}
 
 # Train one XGBoost model to determine the best hyperparameters
 cv_params = {}
@@ -172,9 +179,10 @@ strength_n_goals = {}
 strength_n_shots = {}
 strength_p_goal = {}
 strength_dumb_loss = {}
+state_dumb_loss = {}
 strength_lbls = {}
-n_params = 20
-n_itr = 500
+n_params = 10
+n_itr = 1000
 seed = 66
 for i, (state_shots, state_lbl) in enumerate(zip(game_states, state_lbls)):
     # Omit irrelevant states
@@ -200,7 +208,12 @@ for i, (state_shots, state_lbl) in enumerate(zip(game_states, state_lbls)):
         n_folds = 5
     strength_lbls[state_lbl] = strengths
 
-    # Calculate the goal probability and dumb loss for the given states
+    # Calculate the goal probability and dumb loss for the given states/strengths
+    n_goals = len(state_df.loc[state_df.goal == True])
+    n_shots = len(state_df)
+    p_goal = n_goals / n_shots
+    dumb_loss = -(p_goal * np.log(p_goal) + (1 - p_goal) * np.log(1 - p_goal))
+    state_dumb_loss[state_lbl] = dumb_loss
     for strength in strengths:
         strength_df = state_df.loc[state_df[strength] == 1]
         n_goals = len(strength_df.loc[strength_df.goal == True])
@@ -248,7 +261,7 @@ for i, (state_shots, state_lbl) in enumerate(zip(game_states, state_lbls)):
     print(f'The average training loss is {avg_loss:4.3f} +/-{std_loss:4.3f}')
     print(f'The best {n_params} training loss scores are:')
     print(cv_results.mean_test_score.iloc[:n_params])
-    cv_params[state_lbl] = cv_results.params
+    cv_params[state_lbl] = cv_results.params.tolist()
     cv_scores[state_lbl] = cv_results.mean_test_score.tolist()
 
     # Print training time
@@ -266,6 +279,7 @@ pre_model_data = {'game_states': game_states,
 state_strength_info = {'continuous_features': cont_feats,
                        'boolean_features': bool_feats,
                        'state_lbls': state_lbls,
+                       'state_dumb_loss': strength_dumb_loss,
                        'strength_lbls': strength_lbls,
                        'strength_n_goals': strength_n_goals,
                        'strength_n_shots': strength_n_shots,
