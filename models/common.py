@@ -146,26 +146,35 @@ def sort_game_states(shots, return_index=False, inc_other=True):
         elif state == 'Even':
             if strength == '5v5':
                 shot.update({'5v5': 1, '4v4': 0, '3v3': 0})
+                # shot['stratify'] = '100' + ('1' if shot['goal'] == 1 else '0')
             elif strength == '4v4':
                 shot.update({'5v5': 0, '4v4': 1, '3v3': 0})
+                # shot['stratify'] = '010' + ('1' if shot['goal'] == 1 else '0')
             elif strength == '3v3':
                 shot.update({'5v5': 0, '4v4': 0, '3v3': 1})
+                # shot['stratify'] = '001' + ('1' if shot['goal'] == 1 else '0')
             even_shots.append(ind)
         elif state == 'PP':
             if strength == '5v4':
                 shot.update({'5v4': 1, '5v3': 0, '4v3': 0})
+                # shot['stratify'] = '100' + ('1' if shot['goal'] == 1 else '0')
             elif strength == '5v3':
                 shot.update({'5v4': 0, '5v3': 1, '4v3': 0})
+                # shot['stratify'] = '010' + ('1' if shot['goal'] == 1 else '0')
             elif strength == '4v3':
                 shot.update({'5v4': 0, '5v3': 0, '4v3': 1})
+                # shot['stratify'] = '001' + ('1' if shot['goal'] == 1 else '0')
             pp_shots.append(ind)
         elif state == 'PK':
             if strength == '4v5':
                 shot.update({'4v5': 1, '3v5': 0, '3v4': 0})
+                # shot['stratify'] = '100' + ('1' if shot['goal'] == 1 else '0')
             elif strength == '3v5':
                 shot.update({'4v5': 0, '3v5': 1, '3v4': 0})
+                # shot['stratify'] = '010' + ('1' if shot['goal'] == 1 else '0')
             elif strength == '3v4':
                 shot.update({'4v5': 0, '3v5': 0, '3v4': 1})
+                # shot['stratify'] = '001' + ('1' if shot['goal'] == 1 else '0')
             pk_shots.append(ind)
         else:
             other_shots.append(ind)
