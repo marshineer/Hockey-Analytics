@@ -100,34 +100,34 @@ def binary_encoder(data, col_ls):
     return enc_data, n_enc_col
 
 
-def sort_game_states(shots, return_index=False, inc_other=True):
+def sort_game_states(shots, return_index=False, return_model_data=True):
     """ Sorts the events into player strength game state categories.
 
     For each event, the number of players on each team is checked, and the game
     state determined (5v5, 5v4, 4v5, etc...). Power plays and penalty kills are
     considered separate game states, defined from the perspective of the player
     associated with the event. The events are then sorted. The following game
-    state categories exist: Even_5v5, Even_4v4, Even_3v3, PP_5v4, PP_5v3, PP_4v3,
-    PK_4v5, PK_3v5, PK_3v4, empty_net.
+    state-strength categories exist: Even_5v5, Even_4v4, Even_3v3, PP_5v4,
+    PP_5v3, PP_4v3, PK_4v5, PK_3v5, PK_3v4, empty_net.
 
     Game states where the goalie is pulled for the attacking team are not
     considered different than they would be without the goalie pulled. This
     is because the shooting percentage with and without the goalie pulled is
-    essentially the same.
+    essentially the same. Instead, the pulled goalie is indicated by a boolean
+    feature.
 
     Parameters
         shots: list = all shot data
-        return_index: bool = return the full dataframes or just the indices
-        inc_other: bool = include the 'other' category in returned data
+        return_index: bool = return complete shot data or just the indices
+        return_model_data: bool = only return game states used for xG modelling
 
     Returns
-        even_shots: list = all even strength shots (5v5, 4v4, 3v3)
-        pp_shots: list = all power play shots at (5v4, 5v3, 4v3, 6v5, 6v4, 6v3)
-        pk_shots: list = all penalty kill shots (3v5, 4v5, 3v4)
-        empty_net: list = shots taken on empty nets
-        other: list = all other shots
+        game_states: list of lists = shots corresponding to all game states
+        game_state_lbls: list = shots taken on empty nets
+        game_strength_lbls: dict = all other shots
     """
 
+    # Sort shots into game states and define strength boolean features
     even_shots = []
     pp_shots = []
     pk_shots = []
@@ -179,6 +179,7 @@ def sort_game_states(shots, return_index=False, inc_other=True):
         else:
             other_shots.append(ind)
 
+    # Return list of shot dictionaries, rather than indices
     if not return_index:
         even_shots = [shots[i] for i in even_shots]
         pp_shots = [shots[i] for i in pp_shots]
@@ -186,14 +187,18 @@ def sort_game_states(shots, return_index=False, inc_other=True):
         en_shots = [shots[i] for i in en_shots]
         other_shots = [shots[i] for i in other_shots]
 
-    if inc_other:
+    # Return all game state shots or only those relevant for modelling
+    if return_model_data:
+        game_states = [even_shots, pp_shots, pk_shots]
+        game_state_lbls = ['Even', 'PP', 'PK']
+    else:
         game_states = [even_shots, pp_shots, pk_shots, en_shots, other_shots]
         game_state_lbls = ['Even', 'PP', 'PK', 'EN', 'Other']
-    else:
-        game_states = [even_shots, pp_shots, pk_shots, en_shots]
-        game_state_lbls = ['Even', 'PP', 'PK', 'EN']
+    game_strength_lbls = {'Even': ['5v5', '4v4', '3v3'],
+                          'PP': ['5v4', '5v3', '4v3'],
+                          'PK': ['4v5', '3v5', '3v4']}
 
-    return game_states, game_state_lbls
+    return game_states, game_state_lbls, game_strength_lbls
 
 
 def calc_on_ice_players(shot):
@@ -401,3 +406,53 @@ def create_stratify_feat(stratify_cols):
     stratify_string = ''
 
     return stratify_string.join(stratify_chars)
+
+
+def add_xg_features(shots_df):
+    """ Add features used to predict expected goals.
+
+    Parameters
+        shots_df: dataframe = all shot data
+
+    Returns
+        shots_df: dataframe = updated shot data
+    """
+    forward_mask = shots_df.shooter_position == 'F'
+    shots_df['forward_shot'] = np.where(forward_mask, 1, 0)
+    # turnover = shots_df.last_turnover
+    # same_end = shots_df.last_same_end
+    # shots_df['turnover_in_shot_end'] = np.where(turnover & same_end, 1, 0)
+    prior_events = ['FACEOFF', 'SHOT', 'MISS', 'BLOCK',
+                    'GIVEAWAY', 'TAKEAWAY', 'HIT']
+    new_booleans = ['prior_faceoff', 'prior_shot', 'prior_miss', 'prior_block',
+                    'prior_giveaway', 'prior_takeaway', 'prior_hit']
+    for new_col, prior in zip(new_booleans, prior_events):
+        shots_df[new_col] = np.where(shots_df.last_event_type == prior, 1, 0)
+    # for prior_evt in prior_events:
+    #     new_col = 'prior_' + prior_evt.lower()
+    #     shots_df[new_col] = np.where(shots_df.last_event_type == prior_evt, 1, 0)
+    # shots_df['prior_faceoff'] = np.where(shots_df.last_event_type == 'FACEOFF', 1, 0)
+    # shots_df['prior_shot'] = np.where(shots_df.last_event_type == 'SHOT', 1, 0)
+    # shots_df['prior_miss'] = np.where(shots_df.last_event_type == 'MISS', 1, 0)
+    # shots_df['prior_block'] = np.where(shots_df.last_event_type == 'BLOCK', 1, 0)
+    # shots_df['prior_give'] = np.where(shots_df.last_event_type == 'GIVEAWAY', 1, 0)
+    # shots_df['prior_take'] = np.where(shots_df.last_event_type == 'TAKEAWAY', 1, 0)
+    # shots_df['prior_hit'] = np.where(shots_df.last_event_type == 'HIT', 1, 0)
+
+    return shots_df, ['forward_shot'] + new_booleans
+
+
+def convert_bools_to_int(shots_df, columns):
+    """ Converts boolean columns to integers (True -> 1, False -> 0).
+
+    Parameters
+        shots_df: dataframe = all shot data
+        columns: list = columns to convert
+
+    Returns
+        shots_df: dataframe = updated shot data
+    """
+    for col in columns:
+        shots_df[col] = shots_df[col].astype(int)
+
+    return shots_df

@@ -9,7 +9,7 @@ from sklearn.model_selection import RandomizedSearchCV as RSCV
 from xgboost import XGBClassifier
 from models.common_sql import create_db_connection, select_table
 from models.common import sort_game_states, create_stratify_feat, \
-    normalize_continuous
+    normalize_continuous, add_xg_features, convert_bools_to_int
 
 
 # Dynamically set the CWD
@@ -59,9 +59,9 @@ shots_df.reset_index(drop=True, inplace=True)
 
 # TODO: in ref9... set p(goal) to 0 (should not be high anyway)
 # Remove all shots that come from outside the blueline
-long_mask = (((shots_df.period % 2 == 1) ^ (shots_df.shooter_home == True)) &
+long_mask = (((shots_df.period % 2 == 1) ^ shots_df.shooter_home) &
              (shots_df.x_coord < 25)) | \
-            (~((shots_df.period % 2 == 1) ^ (shots_df.shooter_home == True)) &
+            (~((shots_df.period % 2 == 1) ^ shots_df.shooter_home) &
              (shots_df.x_coord > -25))
 print(f'Number of shots from outside the blueline = {sum(long_mask)} '
       f'({100 * sum(long_mask) / len(shots_df):4.2f}% of all shots)')
@@ -100,41 +100,48 @@ print(f'Number of shots that are blocked = '
 shots_df.drop(shots_df.loc[block_mask].index, inplace=True)
 shots_df.reset_index(drop=True, inplace=True)
 
-# Additional features used in the expected goals model
-forward_mask = shots_df.shooter_position == 'F'
-shots_df['forward_shot'] = np.where(forward_mask, 1, 0)
-turnover_mask = shots_df.last_turnover
-same_end_mask = shots_df.last_same_end
-shots_df['turnover_in_shot_end'] = np.where(turnover_mask & same_end_mask, 1, 0)
-shots_df['prior_faceoff'] = np.where(shots_df.last_event_type == 'FACEOFF', 1, 0)
-shots_df['prior_shot'] = np.where(shots_df.last_event_type == 'SHOT', 1, 0)
-shots_df['prior_miss'] = np.where(shots_df.last_event_type == 'MISS', 1, 0)
-shots_df['prior_block'] = np.where(shots_df.last_event_type == 'BLOCK', 1, 0)
-shots_df['prior_give'] = np.where(shots_df.last_event_type == 'GIVEAWAY', 1, 0)
-shots_df['prior_take'] = np.where(shots_df.last_event_type == 'TAKEAWAY', 1, 0)
-shots_df['prior_hit'] = np.where(shots_df.last_event_type == 'HIT', 1, 0)
+# Define additional features used in the expected goals model
+shots_df, new_booleans = add_xg_features(shots_df)
+# forward_mask = shots_df.shooter_position == 'F'
+# shots_df['forward_shot'] = np.where(forward_mask, 1, 0)
+# turnover_mask = shots_df.last_turnover
+# same_end_mask = shots_df.last_same_end
+# shots_df['turnover_in_shot_end'] = np.where(turnover_mask & same_end_mask, 1, 0)
+# shots_df['prior_faceoff'] = np.where(shots_df.last_event_type == 'FACEOFF', 1, 0)
+# shots_df['prior_shot'] = np.where(shots_df.last_event_type == 'SHOT', 1, 0)
+# shots_df['prior_miss'] = np.where(shots_df.last_event_type == 'MISS', 1, 0)
+# shots_df['prior_block'] = np.where(shots_df.last_event_type == 'BLOCK', 1, 0)
+# shots_df['prior_give'] = np.where(shots_df.last_event_type == 'GIVEAWAY', 1, 0)
+# shots_df['prior_take'] = np.where(shots_df.last_event_type == 'TAKEAWAY', 1, 0)
+# shots_df['prior_hit'] = np.where(shots_df.last_event_type == 'HIT', 1, 0)
 
+# TODO: Fix this so that it works with the training script and ref9
+#  (i.e. can use for new shot lists)
 # Covert existing boolean columns to numerical (integer)
-shots_df.rebound_shot = shots_df.rebound_shot.astype(int)
-shots_df.shooter_home = shots_df.shooter_home.astype(int)
-shots_df.off_wing_shot = shots_df.off_wing_shot.astype(int)
-# shots_df.last_same_end = shots_df.last_same_end.astype(int)
-shots_df.last_same_team = shots_df.last_same_team.astype(int)
-shots_df.pulled_goalie = shots_df.pulled_goalie.astype(int)
-# shots_df.last_turnover = shots_df.last_turnover.astype(int)
-# shots_df.loc[shots_df.shooter_hand == 'L', 'shooter_hand'] = 0
-# shots_df.loc[shots_df.shooter_hand == 'R', 'shooter_hand'] = 1
-# shots_df.loc[shots_df.shooter_position == 'D', 'shooter_position'] = 0
-# shots_df.loc[shots_df.shooter_position == 'F', 'shooter_position'] = 1
-shots_df.goal = shots_df.goal.astype(int)
+bool_feats = ['shooter_home', 'off_wing_shot', 'rebound_shot', 'last_same_team',
+              'last_same_end', 'pulled_goalie']
+shots_df = convert_bools_to_int(shots_df, bool_feats + ['goal'])
+# bool_feats += new_booleans
+# shots_df.rebound_shot = shots_df.rebound_shot.astype(int)
+# shots_df.shooter_home = shots_df.shooter_home.astype(int)
+# shots_df.off_wing_shot = shots_df.off_wing_shot.astype(int)
+# # shots_df.last_same_end = shots_df.last_same_end.astype(int)
+# shots_df.last_same_team = shots_df.last_same_team.astype(int)
+# shots_df.pulled_goalie = shots_df.pulled_goalie.astype(int)
+# # shots_df.last_turnover = shots_df.last_turnover.astype(int)
+# # shots_df.loc[shots_df.shooter_hand == 'L', 'shooter_hand'] = 0
+# # shots_df.loc[shots_df.shooter_hand == 'R', 'shooter_hand'] = 1
+# # shots_df.loc[shots_df.shooter_position == 'D', 'shooter_position'] = 0
+# # shots_df.loc[shots_df.shooter_position == 'F', 'shooter_position'] = 1
+# shots_df.goal = shots_df.goal.astype(int)
 
-# Select a subset of features
+# Define the continuous input features
 cont_feats = ['net_distance',  'net_angle', 'dist_change', 'angle_change',
               'shot_time', 'time_since_last', 'goal_lead_prior']
-bool_feats = ['shooter_home', 'forward_shot', 'off_wing_shot', 'rebound_shot',
-              'last_same_team', 'turnover_in_shot_end', 'pulled_goalie',
-              'prior_faceoff', 'prior_shot', 'prior_miss', 'prior_block',
-              'prior_give', 'prior_take', 'prior_hit']
+# bool_feats = ['shooter_home', 'forward_shot', 'off_wing_shot', 'rebound_shot',
+#               'last_same_team', 'turnover_in_shot_end', 'pulled_goalie',
+#               'prior_faceoff', 'prior_shot', 'prior_miss', 'prior_block',
+#               'prior_give', 'prior_take', 'prior_hit']
 
 # Normalize the continuous features used in training
 shots_df_norm = normalize_continuous(shots_df, cont_feats)[0]
@@ -143,26 +150,27 @@ shots_df_norm = normalize_continuous(shots_df, cont_feats)[0]
 #  the game states: even, PP, PK, pulled goalie (with booleans or n_player feats)
 # TODO: change this to sort into: even, PP, PK, empty net, and other states
 # Divide the shots into their game states
-game_states, state_lbls = sort_game_states(shots_df_norm.to_dict('records'))
+game_state_output = sort_game_states(shots_df_norm.to_dict('records'))
+game_states, state_lbls, strength_lbls = game_state_output
 
 # Define the XGBoost hyperparameter ranges
 # https://xgboost.readthedocs.io/en/stable/python/python_api.html
-xgb_params = {'n_estimators': [50, 100, 200, 400, 800],
-              'learning_rate': np.linspace(0.01, 0.9, 90),
-              'subsample': np.linspace(0.2, 1., 9),
-              'min_child_weight': [1, 5, 10, 20, 40],
-              'max_leaves': [2, 5, 10, 20, 40, 80],
-              'max_depth': np.arange(2, 12),
-              'lambda': [1e-3, 1e-2, 1e-1, 1e0, 1e1, 1e2],
-              'gamma': [1, 2, 4, 8, 12, 16, 24]}
-# # Refinements based on analysis in "my_xG_model_refine_hyperparameters.ipynb"
-# xgb_params = {'n_estimators': np.arange(100, 401, 25),
-#               'learning_rate': np.linspace(0.01, 0.3, 30),
-#               'subsample': np.linspace(0.7, 1., 31),
-#               'min_child_weight': np.linspace(1, 10, 91),
-#               'max_leaves': np.arange(20, 101, 10),
-#               'max_depth': np.arange(3, 10),
-#               'gamma': np.linspace(0.01, 0.5, 50)}
+# xgb_params = {'n_estimators': [50, 100, 200, 400, 800],
+#               'learning_rate': np.linspace(0.01, 0.9, 90),
+#               'subsample': np.linspace(0.2, 1., 9),
+#               'min_child_weight': [1, 5, 10, 20, 40],
+#               'max_leaves': [2, 5, 10, 20, 40, 80],
+#               'max_depth': np.arange(2, 12),
+#               'lambda': [1e-3, 1e-2, 1e-1, 1e0, 1e1, 1e2],
+#               'gamma': [1, 2, 4, 8, 12, 16, 24]}
+# Refinements based on analysis in "my_xG_model_refine_hyperparameters.ipynb"
+xgb_params = {'n_estimators': np.arange(100, 401, 25),
+              'learning_rate': np.linspace(0.01, 0.3, 30),
+              'subsample': np.linspace(0.7, 1., 31),
+              'min_child_weight': np.linspace(1, 20, 191),
+              'max_leaves': np.arange(10, 101, 5),
+              'max_depth': np.arange(3, 11),
+              'gamma': np.linspace(0.1, 5, 50)}
 
 # Train one XGBoost model to determine the best hyperparameters
 cv_params = {}
@@ -172,43 +180,44 @@ strength_n_shots = {}
 strength_p_goal = {}
 strength_dumb_loss = {}
 state_dumb_loss = {}
-strength_lbls = {}
+# strength_lbls = {}
 n_params = 10
-n_itr = 1000
+n_itr = 500
 seed = 66
-for i, (state_shots, state_lbl) in enumerate(zip(game_states, state_lbls)):
-    # Omit irrelevant states
-    if state_lbl not in ['Even', 'PP', 'PK']:
-        print(f'The state {state_lbl} is not modelled')
-        continue
+for i, (state_shots, state) in enumerate(zip(game_states, state_lbls)):
+    # # Omit irrelevant states
+    # if state_lbl not in ['Even', 'PP', 'PK']:
+    #     print(f'The state {state_lbl} is not modelled')
+    #     continue
 
     # Covert the shot list to a dataframe
     state_df = pd.DataFrame(state_shots, columns=list(state_shots[0].keys()))
-    print(f'\nThe {state_lbl} state contains {len(state_df)} shots')
+    print(f'\nThe {state} state contains {len(state_df)} shots')
 
     # Define the parameters for each game strength
-    strengths = None
+    strengths = strength_lbls[state]
+    # strengths = None
     n_folds = None
-    if state_lbl == 'Even':
-        strengths = ['5v5', '4v4', '3v3']
+    if state == 'Even':
+        # strengths = ['5v5', '4v4', '3v3']
         n_folds = 20
-    elif state_lbl == 'PP':
-        strengths = ['5v4', '5v3', '4v3']
+    elif state == 'PP':
+        # strengths = ['5v4', '5v3', '4v3']
         n_folds = 20
-    elif state_lbl == 'PK':
-        strengths = ['4v5', '3v5', '3v4']
+    elif state == 'PK':
+        # strengths = ['4v5', '3v5', '3v4']
         n_folds = 5
-    strength_lbls[state_lbl] = strengths
+    # strength_lbls[state] = strengths
 
     # Calculate the goal probability and dumb loss for the given states/strengths
-    n_goals = len(state_df.loc[state_df.goal == True])
+    n_goals = len(state_df.loc[state_df.goal == 1])
     n_shots = len(state_df)
     p_goal = n_goals / n_shots
     dumb_loss = -(p_goal * np.log(p_goal) + (1 - p_goal) * np.log(1 - p_goal))
-    state_dumb_loss[state_lbl] = dumb_loss
+    state_dumb_loss[state] = dumb_loss
     for strength in strengths:
         strength_df = state_df.loc[state_df[strength] == 1]
-        n_goals = len(strength_df.loc[strength_df.goal == True])
+        n_goals = len(strength_df.loc[strength_df.goal == 1])
         n_shots = len(strength_df)
         p_goal = n_goals / n_shots
         dumb_loss = -(p_goal * np.log(p_goal) +
@@ -218,17 +227,17 @@ for i, (state_shots, state_lbl) in enumerate(zip(game_states, state_lbls)):
         strength_p_goal[strength] = p_goal
         strength_dumb_loss[strength] = dumb_loss
 
-    # Define a column to stratify the data by game state and target value
-    # https://stackoverflow.com/questions/45516424/sklearn-train-test-split-on-pandas-stratify-by-multiple-columns
-    # https://stackoverflow.com/questions/30040597/how-to-generate-a-custom-cross-validation-generator-in-scikit-learn
-    # https://medium.com/@antoniolui/applying-custom-functions-in-pandas-e30bdc1f4e76
-    strat_cols = strengths + ['goal']
-    state_df['stratify'] = state_df.apply(lambda x:
-                                          create_stratify_feat(x[strat_cols]),
-                                          axis=1)
+    # # Define a column to stratify the data by game state and target value
+    # # https://stackoverflow.com/questions/45516424/sklearn-train-test-split-on-pandas-stratify-by-multiple-columns
+    # # https://stackoverflow.com/questions/30040597/how-to-generate-a-custom-cross-validation-generator-in-scikit-learn
+    # # https://medium.com/@antoniolui/applying-custom-functions-in-pandas-e30bdc1f4e76
+    # strat_cols = strengths + ['goal']
+    # state_df['stratify'] = state_df.apply(lambda x:
+    #                                       create_stratify_feat(x[strat_cols]),
+    #                                       axis=1)
 
     # Split the data into features and target variable
-    train_features = cont_feats + bool_feats + strengths
+    train_features = cont_feats + bool_feats + new_booleans + strengths
     X_pd, y_pd = state_df[train_features].values, state_df.goal.values
 
     # Define a stratified cross-validation split
@@ -253,25 +262,31 @@ for i, (state_shots, state_lbl) in enumerate(zip(game_states, state_lbls)):
     print(f'The average training loss is {avg_loss:4.3f} +/-{std_loss:4.3f}')
     print(f'The best {n_params} training loss scores are:')
     print(cv_results.mean_test_score.iloc[:n_params])
-    cv_params[state_lbl] = cv_results.params.tolist()
-    cv_scores[state_lbl] = cv_results.mean_test_score.tolist()
+    cv_params[state] = cv_results.params.tolist()
+    cv_scores[state] = cv_results.mean_test_score.tolist()
 
     # Print training time
     t_end = time() - t_start
-    print(f'Took {timedelta(seconds=t_end)} to train the {state_lbl} XGB model')
+    print(f'Took {timedelta(seconds=t_end)} to train the {state} XGB model')
 
 # Save the data required to train the models
 pre_model_data = {'game_states': game_states,
+                  # 'training_features': cont_feats + bool_feats + new_booleans,
+                  # 'continuous_features': cont_feats,
+                  # 'boolean_features': bool_feats,
+                  # 'added_booleans': new_booleans,
                   'state_lbls': state_lbls,
+                  # 'strength_lbls': state_lbls,
                   'random_state': seed,
                   'xgb_params': xgb_params,
                   'cv_params': cv_params,
                   'cv_scores': cv_scores}
 
-state_strength_info = {'continuous_features': cont_feats,
+modelling_meta_info = {'continuous_features': cont_feats,
                        'boolean_features': bool_feats,
+                       'added_booleans': new_booleans,
                        'state_lbls': state_lbls,
-                       'state_dumb_loss': strength_dumb_loss,
+                       'state_dumb_loss': state_dumb_loss,
                        'strength_lbls': strength_lbls,
                        'strength_n_goals': strength_n_goals,
                        'strength_n_shots': strength_n_shots,
@@ -284,6 +299,6 @@ with open(fpath, 'wb') as f:
     pickle.dump(pre_model_data, f)
 
 # Save the state data
-fpath = froot + f'/../data/goal_prob_model/state_strength_info.pkl'
+fpath = froot + f'/../data/goal_prob_model/expected_goal_modelling_info.pkl'
 with open(fpath, 'wb') as f:
-    pickle.dump(state_strength_info, f)
+    pickle.dump(modelling_meta_info, f)
